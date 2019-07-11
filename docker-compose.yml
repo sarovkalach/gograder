@@ -28,12 +28,12 @@ services:
     volumes:
       - './db/tasks.sql:/docker-entrypoint-initdb.d/items.sql'
 
-  redis:
-    image: 'redis'
-    ports:
-      - '6381:6381'
-    environment:
-      - ALLOW_EMPTY_PASSWORD=yes
+  # redis:
+  #   image: 'redis'
+  #   ports:
+  #     - '6381:6381'
+  #   environment:
+  #     - ALLOW_EMPTY_PASSWORD=yes
 
   rabbitmq:
     image: 'rabbitmq'
