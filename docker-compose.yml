@@ -17,13 +17,12 @@ services:
   #   networks: # Networks to join (Services on the same network can communicate with each other using their name)
   #     - backend
   mysql:
-    image: 'mysql:latest'
+    image: mysql
     environment:
-      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_ROOT_PASSWORD=1234
       - MYSQL_DATABASE=tasks
-      - MYSQL_USER=test
-      - MYSQL_PASSWORD=test
-      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_USER=kalach
+      - MYSQL_PASSWORD=1234
     ports:
       - '3306:3306'
     volumes:
