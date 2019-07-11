@@ -1,0 +1,53 @@
+version: '3'
+
+services:
+  # App Service
+  # app:
+  #   # Configuration for building the docker image for the service
+  #   build:
+  #     context: . # Use an image built from the specified dockerfile in the current directory.
+  #     dockerfile: Dockerfile
+  #   ports:
+  #     - "8080:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
+  #   restart: unless-stopped
+  #   depends_on: 
+  #     - redis # This service depends on redis. Start that first.
+  #   environment: # Pass environment variables to the service
+  #     REDIS_URL: redis:6379    
+  #   networks: # Networks to join (Services on the same network can communicate with each other using their name)
+  #     - backend
+  mysql:
+    image: 'mysql:latest'
+    environment:
+      - MYSQL_ALLOW_EMPTY_PASSWORD=yes
+      - MYSQL_DATABASE=tasks
+      - MYSQL_USER=test
+      - MYSQL_PASSWORD=test
+      - MYSQL_ROOT_PASSWORD=root
+    ports:
+      - '3306:3306'
+    volumes:
+      - './db/tasks.sql:/docker-entrypoint-initdb.d/items.sql'
+
+  redis:
+    image: 'redis'
+    ports:
+      - '6381:6381'
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+
+  rabbitmq:
+    image: 'rabbitmq'
+    ports:
+      - '5672:5672'
+
+  minio:
+    image: minio/minio:latest
+    hostname: minio1
+    volumes:
+      - /minio-data:/export
+    ports:
+      - '900:9000'
+    environment:
+      MINIO_ACCESS_KEY: admin
+      MINIO_SECRET_KEY: pass

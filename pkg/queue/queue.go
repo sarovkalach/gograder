@@ -1,8 +1,8 @@
 package queue
 
-import "fmt" 
+import "fmt"
 
 // Test func
 func Test(name string) string {
-   return fmt.Sprintf("Hi, %s!", name)
+	return fmt.Sprintf("Hi, %s!", name)
 }
