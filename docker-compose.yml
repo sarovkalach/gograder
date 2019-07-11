@@ -28,13 +28,6 @@ services:
     volumes:
       - './db/tasks.sql:/docker-entrypoint-initdb.d/items.sql'
 
-  # redis:
-  #   image: 'redis'
-  #   ports:
-  #     - '6381:6381'
-  #   environment:
-  #     - ALLOW_EMPTY_PASSWORD=yes
-
   rabbitmq:
     image: 'rabbitmq'
     ports:
@@ -51,3 +44,19 @@ services:
       MINIO_ACCESS_KEY: minio
       MINIO_SECRET_KEY: minio
     command: server http://minio1/data
+
+
+  redis:
+    image: 'bitnami/redis:5.0'
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+
+volumes:
+  redis_data:
+    driver: local
