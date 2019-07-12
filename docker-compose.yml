@@ -37,14 +37,26 @@ services:
     image: minio/minio:latest
     hostname: minio1
     volumes:
-      - /minio-data:/export
+      - ./minio-data:/export
     ports:
       - '9000:9000'
     environment:
       MINIO_ACCESS_KEY: 9013HBZHIRHONH8ZIWL6
       MINIO_SECRET_KEY: gKIVgZaWAiuXbugPv9+dT4MKWsKlqxCyXFI+9ys+
-    command: server /data
-
+      # MINIO_DEFAULT_BUCKETS: grader,test
+    command: server /export
+    
+  createbuckets:
+    image: minio/mc
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until (/usr/bin/mc config host add myminio http://minio:9000 9013HBZHIRHONH8ZIWL6 gKIVgZaWAiuXbugPv9+dT4MKWsKlqxCyXFI+9ys+) do echo '...waiting...' && sleep 1; done;
+      /usr/bin/mc mb myminio/grader;
+      /usr/bin/mc policy download myminio/grader;
+      exit 0;
+      "
 
   redis:
     image: 'bitnami/redis:5.0'
