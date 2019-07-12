@@ -4,11 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gorilla/mux"
 
 	// _ "github.com/go-sql-driver/mysql"
 	// "github.com/gorilla/mux"
@@ -159,34 +157,4 @@ func (f *FileLoader) uploadS3(file *os.File) {
 		log.Fatalln(err)
 	}
 	log.Printf("Successfully uploaded %s of size %d\n", "log.txt", n)
-}
-
-var uploadFormTmpl = []byte(`
-<html>
-	<body>
-	<form action="/upload" method="post" enctype="multipart/form-data">
-		Image: <input type="file" name="my_file">
-		<input type="submit" value="Upload">
-	</form>
-	</body>
-</html>
-`)
-
-type Server struct {
-	Router   *mux.Router
-	Uploader *FileLoader
-}
-
-func NewServer() *Server {
-	s := &Server{Router: mux.NewRouter(), Uploader: NewFileLoader()}
-	s.initRoutes()
-	return s
-}
-
-func (a *Server) initRoutes() {
-	a.Router.HandleFunc("/", a.uploadFile)
-}
-
-func (a *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
-	w.Write(uploadFormTmpl)
 }
