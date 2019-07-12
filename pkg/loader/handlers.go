@@ -17,6 +17,14 @@ var uploadFormTmpl = []byte(`
 </html>
 `)
 
+var SuccessTmpl = []byte(`
+<html>
+	<body>
+		Success
+	</body>
+</html>
+`)
+
 type Server struct {
 	Router   *mux.Router
 	Uploader *FileLoader
@@ -28,10 +36,15 @@ func NewServer() *Server {
 	return s
 }
 
-func (a *Server) initRoutes() {
-	a.Router.HandleFunc("/", a.uploadFile)
+func (s *Server) initRoutes() {
+	s.Router.HandleFunc("/", s.uploadFile)
+	s.Router.HandleFunc("/upload", s.uploadSuccess)
 }
 
-func (a *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
+func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
 	w.Write(uploadFormTmpl)
+}
+
+func (s *Server) uploadSuccess(w http.ResponseWriter, r *http.Request) {
+	w.Write(SuccessTmpl)
 }

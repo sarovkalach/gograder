@@ -24,10 +24,10 @@ type FileLoader struct {
 
 type Task struct {
 	ID       int
+	Graded   bool
 	Course   string
 	Task     string
 	User     string
-	Graded   bool
 	Filename string
 }
 
@@ -44,7 +44,7 @@ func showDBTasks(db *sql.DB) {
 	}
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.ID, &task.Course, &task.Task, &task.User, &task.Graded)
+		err = rows.Scan(&task.ID, &task.Graded, &task.Course, &task.Task, &task.User, &task.Filename)
 		if err != nil {
 			log.Println("SELECT Error Read:", err)
 		}
@@ -55,10 +55,11 @@ func showDBTasks(db *sql.DB) {
 
 func addDBTask(db *sql.DB, task *Task) {
 	result, err := db.Exec(
-		"INSERT INTO tasks (`course`, `task`, `user`) VALUES (?, ?, ?)",
+		"INSERT INTO tasks (`course`, `task`, `user`, `filename`) VALUES (?, ?, ?, ?)",
 		task.Course,
 		task.Task,
 		task.User,
+		task.Filename,
 	)
 	if err != nil {
 		log.Println("INSERT Error:", err)
@@ -123,7 +124,7 @@ func (f *FileLoader) initS3() {
 }
 
 func (f *FileLoader) initDBCon() {
-	dsn := "root:1234@/tasks?charset=utf8"
+	dsn := "kalach:1234@/tasks?charset=utf8"
 	db, err := sql.Open("mysql", dsn)
 	err = db.Ping() // вот тут будет первое подключение к базе
 	if err != nil {

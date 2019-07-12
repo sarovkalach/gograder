@@ -35,14 +35,14 @@ func TestDBSelect(t *testing.T) {
 	showDBTasks(f.DBCon)
 }
 
-func TestDBAdd(t *testing.T) {
+func TestDBInsert(t *testing.T) {
 	f := NewFileLoader()
-	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Filename: "test.txt"}
+	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
 	addDBTask(f.DBCon, task)
 }
 
 func TestAmqpSend(t *testing.T) {
 	f := NewFileLoader()
-	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Filename: "test.txt"}
+	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
 	addAmqpTask(f.amqpCon, task)
 }
