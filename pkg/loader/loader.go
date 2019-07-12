@@ -177,7 +177,7 @@ type Server struct {
 	Uploader *FileLoader
 }
 
-func newServer() *Server {
+func NewServer() *Server {
 	s := &Server{Router: mux.NewRouter(), Uploader: NewFileLoader()}
 	s.initRoutes()
 	return s
