@@ -41,9 +41,9 @@ services:
     ports:
       - '9000:9000'
     environment:
-      MINIO_ACCESS_KEY: minio
-      MINIO_SECRET_KEY: minio
-    command: server http://minio1/data
+      MINIO_ACCESS_KEY: 9013HBZHIRHONH8ZIWL6
+      MINIO_SECRET_KEY: gKIVgZaWAiuXbugPv9+dT4MKWsKlqxCyXFI+9ys+
+    command: server /data
 
 
   redis:
