@@ -22,7 +22,8 @@ func TestUpload(t *testing.T) {
 	// for _, bucket := range buckets {
 	// 	fmt.Println(bucket)
 	// }
-	f.uploadS3(file)
+	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
+	uploadS3(f.s3Client, task)
 }
 
 func TestDBcon(t *testing.T) {

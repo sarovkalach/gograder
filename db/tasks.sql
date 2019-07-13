@@ -11,11 +11,5 @@ CREATE TABLE `tasks` (
   `task` varchar(255) NOT NULL,
   `user` varchar(255) NOT NULL,
   `filename` varchar(255) NOT NULL,
-  
-  -- `updated` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
-
--- INSERT INTO `tasks` (`id`, `course`, `task`, `user`, `filename`) VALUES
--- (1, 'false','Golang course',	'Финальный проект',	`test.txt`,'akalachov','test.txt'),
--- -- (2,	'memcache',	'Рассказать про мемкеш с примером использования',	NULL);
