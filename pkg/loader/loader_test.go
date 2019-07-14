@@ -32,7 +32,7 @@ func TestDBInsertTask(t *testing.T) {
 func TestDBInsertUser(t *testing.T) {
 	f := NewFileLoader()
 	// user := &User{Email: "akalachov@mail.ru", Password: "fcwecvervev", LastName: "Alex", FirstName: "Kalachov"}
-	user := &User{Email: "akalachov@mail.ru", Password: "fcwecvervev"}
+	user := &User{Email: "akalachov@mail.ru", Password: "1234"}
 	result, err := f.DBCon.Exec(
 		// "INSERT INTO users (`email`, `password`, `last_name`, `first_name`) VALUES (?, ?, ?, ?)",
 		"INSERT INTO users (`email`, `password`) VALUES (?, ?)",
@@ -65,6 +65,27 @@ func TestDBSelectUsers(t *testing.T) {
 			log.Println("SELECT Error Read:", err)
 		}
 		fmt.Println(user)
+	}
+	rows.Close()
+
+}
+
+func TestDBSelectTasks(t *testing.T) {
+	f := NewFileLoader()
+
+	rows, err := f.DBCon.Query("SELECT * FROM tasks")
+	if err != nil {
+		log.Println("SELECT Error:", err)
+	}
+	tasks := make([]Task, 0, 16)
+	for rows.Next() {
+		task := &Task{}
+		err = rows.Scan(&task.ID, &task.Graded, &task.Course, &task.Task, &task.User, &task.Filename)
+		if err != nil {
+			log.Println("SELECT Error Read:", err)
+		}
+		fmt.Println(task)
+		tasks = append(tasks, *task)
 	}
 	rows.Close()
 

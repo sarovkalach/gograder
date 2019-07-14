@@ -83,7 +83,7 @@ func (f *FileLoader) initS3() error {
 }
 
 func (f *FileLoader) initDBCon() error {
-	dsn := "kalach:1234@/users?charset=utf8"
+	dsn := "kalach:1234@/grader?charset=utf8"
 	db, err := sql.Open("mysql", dsn)
 	err = db.Ping() // вот тут будет первое подключение к базе
 	if err != nil {

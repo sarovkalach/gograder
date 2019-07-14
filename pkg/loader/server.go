@@ -59,10 +59,10 @@ func (s *Server) UserByEmail(email string) (*User, error) {
 	return user, nil
 }
 
-func (s *Server) CreateUser(meta map[string]string) error {
+func (s *Server) CreateUser(meta map[string]string) (int, error) {
 	_, err := s.UserByEmail(meta["email"])
 	if err == nil {
-		return errUserIsExists
+		return 0, errUserIsExists
 	}
 
 	hashedPasswd := fmt.Sprintf("%x", sha256.Sum256([]byte(meta["password"])))
@@ -77,12 +77,31 @@ func (s *Server) CreateUser(meta map[string]string) error {
 		log.Println("Error reading Last ID", err)
 	}
 	log.Printf("Successfully saved user:  %s. Last Insert ID = %d\n", meta["email"], lastID)
-	return nil
+	return int(lastID), nil
 }
 
 func (s *Server) Encrypt(passwd string) string {
 	hashedPasswd := fmt.Sprintf("%x", sha256.Sum256([]byte(passwd)))
 	return hashedPasswd
+}
+
+func (s *Server) GetUserTasks(id string) []Task {
+	rows, err := s.Uploader.DBCon.Query("SELECT * FROM tasks WHERE  user = ?", "kalach")
+	if err != nil {
+		log.Println("SELECT Error:", err)
+	}
+	tasks := make([]Task, 0, 16)
+	for rows.Next() {
+		task := &Task{}
+		err = rows.Scan(&task.ID, &task.Graded, &task.Course, &task.Task, &task.User, &task.Filename)
+		if err != nil {
+			log.Println("SELECT Error Read:", err)
+		}
+		fmt.Println(task)
+		tasks = append(tasks, *task)
+	}
+	rows.Close()
+	return tasks
 }
 
 // func (s *Server) CheckSession() (valid bool, err error) {

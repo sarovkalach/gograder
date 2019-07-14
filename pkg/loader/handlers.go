@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"text/template"
 	"time"
 	// "github.com/gorilla/sessions"
@@ -24,11 +25,11 @@ func logError(args ...interface{}) {
 	log.Println(args...)
 }
 
-func newCookie() http.Cookie {
+func newCookie(id int) http.Cookie {
 	expiration := time.Now().Add(3 * time.Hour)
 	cookie := http.Cookie{
 		Name:     "_cookie",
-		Value:    "1", // hardcoderd
+		Value:    strconv.Itoa(id), // hardcoderd
 		HttpOnly: true,
 		Expires:  expiration,
 	}
@@ -36,11 +37,13 @@ func newCookie() http.Cookie {
 }
 
 func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
-	_, err := r.Cookie("_cookie")
+	cookie, err := r.Cookie("_cookie")
 	loggedIn := (err != http.ErrNoCookie)
 	if loggedIn {
 		t := template.Must(template.ParseFiles("../../web/templates/stat.html"))
-		t.Execute(w, nil)
+		tasks := s.GetUserTasks(cookie.Value)
+		// data := []int{1, 2, 3, 4, 5}
+		t.Execute(w, tasks)
 	} else {
 		http.Redirect(w, r, "/", 302)
 	}
@@ -49,19 +52,19 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 	// err := r.ParseForm()
-	// user, err := s.UserByEmail(r.PostFormValue("email"))
-	// if err != nil {
-	// 	logError(errUserNotFound)
-	// 	w.WriteHeader(http.StatusNotFound)
-	// 	w.Write([]byte("User not found"))
-	// 	return
-	// }
-	if r.PostFormValue("password") == "1234" {
-		// if user.Password == s.Encrypt(r.PostFormValue("password")) {
+	user, err := s.UserByEmail(r.PostFormValue("email"))
+	if err != nil {
+		logError(errUserNotFound)
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte("User not found"))
+		return
+	}
+	// if r.PostFormValue("password") == "1234" {
+	if user.Password == s.Encrypt(r.PostFormValue("password")) {
 		// if err != nil {
 		// 	logError(errCannotCreateSession)
 		// }
-		cookie := newCookie()
+		cookie := newCookie(user.ID)
 		http.SetCookie(w, &cookie)
 		http.Redirect(w, r, "/stat", 302)
 	} else {
@@ -98,14 +101,15 @@ func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
 		"email":    r.PostFormValue("email"),
 		"password": r.PostFormValue("password"),
 	}
-	fmt.Println("signupAccount:", meta)
-	if err := s.CreateUser(meta); err == errUserIsExists {
+	fmt.Println("signupAccount META:", meta)
+	id, err := s.CreateUser(meta)
+	if err == errUserIsExists {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))
 		return
 	}
 
-	cookie := newCookie()
+	cookie := newCookie(id)
 	http.SetCookie(w, &cookie)
 	http.Redirect(w, r, "/stat", 302)
 }
@@ -132,7 +136,7 @@ func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(10 << 20)
+	err := r.ParseMultipartForm(5 * 1024 * 1025)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Huge file"))
