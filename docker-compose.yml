@@ -20,13 +20,15 @@ services:
     image: mysql
     environment:
       - MYSQL_ROOT_PASSWORD=1234
-      - MYSQL_DATABASE=tasks
+      - MYSQL_DATABASE=users
       - MYSQL_USER=kalach
       - MYSQL_PASSWORD=1234
     ports:
       - '3306:3306'
     volumes:
-      - './db/tasks.sql:/docker-entrypoint-initdb.d/items.sql'
+      - './db/tasks.sql:/docker-entrypoint-initdb.d/tasks.sql'
+      - './db/users.sql:/docker-entrypoint-initdb.d/users.sql'
+      
 
   rabbitmq:
     image: 'rabbitmq'
