@@ -1,4 +1,4 @@
-version: '3'
+version: '3.1'
 
 services:
   # App Service
@@ -19,10 +19,10 @@ services:
   adminer:
     image: adminer
     restart: always
-    networks:
-      - docknet
+    # networks:
+    #   - docknet
     ports:
-      - 8080:8080
+      - 8090:8080
 
   mysql:
     image: mysql
@@ -32,8 +32,8 @@ services:
       - MYSQL_DATABASE=grader
       - MYSQL_USER=kalach
       - MYSQL_PASSWORD=1234
-    networks:
-      - docknet
+    # networks:
+    #   - docknet
     ports:
       - '3306:3306'
     volumes:
