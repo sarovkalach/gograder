@@ -9,4 +9,5 @@ require (
 	github.com/minio/minio-go/v6 v6.0.32
 	github.com/nfnt/resize v0.0.0-20180221191011-83c6a9932646 // indirect
 	github.com/streadway/amqp v0.0.0-20190404075320-75d898a42a94
+	google.golang.org/grpc v1.22.0 // indirect
 )

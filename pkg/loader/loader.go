@@ -59,12 +59,18 @@ func showDBTasks(db *sql.DB) {
 	rows.Close()
 }
 
-func NewFileLoader() *FileLoader {
+func NewFileLoader() (*FileLoader, error) {
 	f := &FileLoader{}
-	f.initS3()
-	f.initDBCon()
-	f.initAMQPCon()
-	return f
+	if err := f.initS3(); err != nil {
+		return nil, err
+	}
+	if err := f.initDBCon(); err != nil {
+		return nil, err
+	}
+	if err := f.initAMQPCon(); err != nil {
+		return nil, err
+	}
+	return f, nil
 }
 
 func (f *FileLoader) initS3() error {

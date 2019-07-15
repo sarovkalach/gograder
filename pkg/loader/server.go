@@ -21,9 +21,13 @@ type Server struct {
 }
 
 func NewServer() *Server {
+	uploader, err := NewFileLoader()
+	if err != nil {
+		panic(err)
+	}
 	s := &Server{
 		Router:   mux.NewRouter(),
-		Uploader: NewFileLoader(),
+		Uploader: uploader,
 		// SessionStore: sessions.NewCookieStore([]byte(os.Getenv("TEST"))),
 	}
 	s.initRoutes()

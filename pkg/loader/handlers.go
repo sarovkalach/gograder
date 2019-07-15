@@ -42,7 +42,6 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 	if loggedIn {
 		t := template.Must(template.ParseFiles("../../web/templates/stat.html"))
 		tasks := s.GetUserTasks(cookie.Value)
-		// data := []int{1, 2, 3, 4, 5}
 		t.Execute(w, tasks)
 	} else {
 		http.Redirect(w, r, "/", 302)
@@ -71,17 +70,6 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", 302)
 	}
 }
-
-// func (s *Server) Session(writer http.ResponseWriter, request *http.Request) (sess Session, err error) {
-// 	cookie, err := request.Cookie("_cookie")
-// 	if err == nil {
-// 		sess = Session{Uuid: cookie.Value}
-// 		if ok, _ := s.CheckSession(); !ok {
-// 			err = errors.New("Invalid session")
-// 		}
-// 	}
-// 	return
-// }
 
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("../../web/templates/index.html"))
@@ -130,12 +118,13 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
-func (s *Server) uploadFile(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.ParseFiles("../../web/templates/upload.html"))
-	t.Execute(w, nil)
-}
-
 func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		t := template.Must(template.ParseFiles("../../web/templates/upload.html"))
+		t.Execute(w, nil)
+		return
+	}
+
 	err := r.ParseMultipartForm(5 * 1024 * 1025)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)

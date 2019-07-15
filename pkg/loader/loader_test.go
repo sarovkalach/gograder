@@ -56,13 +56,13 @@ func TestDBSelectUsers(t *testing.T) {
 
 	rows, err := f.DBCon.Query("SELECT * FROM users")
 	if err != nil {
-		log.Println("SELECT Error:", err)
+		t.Error(err)
 	}
 	for rows.Next() {
 		user := &User{}
 		err = rows.Scan(&user.ID, &user.Email, &user.Password)
 		if err != nil {
-			log.Println("SELECT Error Read:", err)
+			t.Error(err)
 		}
 		fmt.Println(user)
 	}
@@ -75,7 +75,7 @@ func TestDBSelectTasks(t *testing.T) {
 
 	rows, err := f.DBCon.Query("SELECT * FROM tasks")
 	if err != nil {
-		log.Println("SELECT Error:", err)
+		t.Error(err)
 	}
 	tasks := make([]Task, 0, 16)
 	for rows.Next() {
