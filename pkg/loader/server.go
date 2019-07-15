@@ -35,7 +35,7 @@ func NewServer() *Server {
 }
 
 func (s *Server) Run() {
-	log.Println("Server Start")
+	log.Println("Loader Start")
 	log.Fatal(http.ListenAndServe(":8080", s.Router))
 }
 
@@ -107,8 +107,3 @@ func (s *Server) GetUserTasks(id string) []Task {
 	rows.Close()
 	return tasks
 }
-
-// func (s *Server) CheckSession() (valid bool, err error) {
-// 	return true, nil
-// 	// session, _ := s.SessionStore.Get(r, "session-name")
-// }

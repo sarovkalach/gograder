@@ -50,7 +50,6 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
-	// err := r.ParseForm()
 	user, err := s.UserByEmail(r.PostFormValue("email"))
 	if err != nil {
 		logError(errUserNotFound)
@@ -58,7 +57,6 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("User not found"))
 		return
 	}
-	// if r.PostFormValue("password") == "1234" {
 	if user.Password == s.Encrypt(r.PostFormValue("password")) {
 		// if err != nil {
 		// 	logError(errCannotCreateSession)
@@ -119,17 +117,23 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
+	_, err := r.Cookie("_cookie")
+	if err == http.ErrNoCookie {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
 	if r.Method == "GET" {
 		t := template.Must(template.ParseFiles("../../web/templates/upload.html"))
 		t.Execute(w, nil)
 		return
 	}
 
-	err := r.ParseMultipartForm(5 * 1024 * 1025)
+	err = r.ParseMultipartForm(5 * 1024 * 1025)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Huge file"))
 	}
+
 	file, handler, err := r.FormFile("uploadfile")
 	if err != nil {
 		fmt.Println("Error Retrieving the File")
@@ -142,8 +146,7 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 	io.Copy(f, file)
 
-	meta := make(map[string]string)
-	meta["filename"] = handler.Filename
+	meta := map[string]string{"filename": handler.Filename}
 	if err := s.Uploader.saveUserTask(meta); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Internal server Error"))

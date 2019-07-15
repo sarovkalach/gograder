@@ -187,9 +187,9 @@ func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) error {
 		false,      // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			UserId:      task.User,
-			Type:        task.Course,
-			Body:        []byte(task.Task),
+			// UserId:      task.User,
+			// Type:        task.Course,
+			Body: []byte(task.Task),
 		})
 
 	if err != nil {

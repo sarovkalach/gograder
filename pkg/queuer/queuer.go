@@ -24,9 +24,10 @@ type Queuer struct {
 
 func NewQueuer() *Queuer {
 	q := &Queuer{
-		messageCh: make(chan amqp.Delivery, 1),
+		messageCh: make(chan amqp.Delivery, 8),
 		stopCh:    make(chan bool),
 	}
+	q.initAMQPCon()
 	return q
 }
 
@@ -79,6 +80,7 @@ func (q *Queuer) Run() error {
 	if err != nil {
 		return errRegisterConsumer
 	}
+
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
@@ -86,6 +88,7 @@ func (q *Queuer) Run() error {
 		}
 	}()
 
+	log.Println("Queuer Start")
 	<-q.stopCh
 	return nil
 }

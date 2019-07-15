@@ -8,11 +8,14 @@ import (
 )
 
 func TestUpload(t *testing.T) {
-	f := NewFileLoader()
+	f, err := NewFileLoader()
+	if err != nil {
+		t.Error(err)
+	}
 	filename := "/home/kalach/log.txt"
 	file, err := os.Open(filename)
 	if err != nil {
-		log.Fatal(err)
+		t.Error(err)
 	}
 	file.Close()
 	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
@@ -24,13 +27,19 @@ func TestDBcon(t *testing.T) {
 }
 
 func TestDBInsertTask(t *testing.T) {
-	f := NewFileLoader()
+	f, err := NewFileLoader()
+	if err != nil {
+		t.Error(err)
+	}
 	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
 	addDBTask(f.DBCon, task)
 }
 
 func TestDBInsertUser(t *testing.T) {
-	f := NewFileLoader()
+	f, err := NewFileLoader()
+	if err != nil {
+		t.Error(err)
+	}
 	// user := &User{Email: "akalachov@mail.ru", Password: "fcwecvervev", LastName: "Alex", FirstName: "Kalachov"}
 	user := &User{Email: "akalachov@mail.ru", Password: "1234"}
 	result, err := f.DBCon.Exec(
@@ -52,7 +61,10 @@ func TestDBInsertUser(t *testing.T) {
 }
 
 func TestDBSelectUsers(t *testing.T) {
-	f := NewFileLoader()
+	f, err := NewFileLoader()
+	if err != nil {
+		t.Error(err)
+	}
 
 	rows, err := f.DBCon.Query("SELECT * FROM users")
 	if err != nil {
@@ -71,7 +83,10 @@ func TestDBSelectUsers(t *testing.T) {
 }
 
 func TestDBSelectTasks(t *testing.T) {
-	f := NewFileLoader()
+	f, err := NewFileLoader()
+	if err != nil {
+		t.Error(err)
+	}
 
 	rows, err := f.DBCon.Query("SELECT * FROM tasks")
 	if err != nil {
@@ -90,8 +105,14 @@ func TestDBSelectTasks(t *testing.T) {
 	rows.Close()
 
 }
+
 func TestAmqpSend(t *testing.T) {
-	f := NewFileLoader()
+	f, err := NewFileLoader()
+	if err != nil {
+		t.Error(err)
+	}
 	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
-	addAmqpTask(f.amqpCon, f.queue, task)
+	if err := addAmqpTask(f.amqpCon, f.queue, task); err != nil {
+		t.Error(err)
+	}
 }
