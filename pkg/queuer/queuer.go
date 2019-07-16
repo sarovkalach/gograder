@@ -1,8 +1,13 @@
 package queuer
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"net/http"
+	"time"
 
 	"github.com/streadway/amqp"
 )
@@ -12,6 +17,10 @@ var (
 	errOpenChannel      = errors.New("Failed to open a channel")
 	errAMQPDeclare      = errors.New("Failed to declare a queue")
 	errRegisterConsumer = errors.New("Failed to register a consumer")
+)
+
+var (
+	graderURL = "http://127.0.0.1:8081"
 )
 
 type Queuer struct {
@@ -85,6 +94,7 @@ func (q *Queuer) Run() error {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
 			q.messageCh <- d
+			q.SendTask()
 		}
 	}()
 
@@ -95,4 +105,28 @@ func (q *Queuer) Run() error {
 
 func (q *Queuer) Stop() {
 	q.stopCh <- true
+}
+
+func (q *Queuer) SendTask() {
+
+	fmt.Println("URL:>", graderURL)
+	var jsonStr = []byte(`{"name":"Test message", "timeout":3}`)
+	req, err := http.NewRequest("POST", graderURL, bytes.NewBuffer(jsonStr))
+	if err != nil {
+		log.Println("NewRequest ERR:", err)
+	}
+	req.Header.Set("X-Custom-Header", "myvalue")
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+
+	fmt.Println("response Status:", resp.Status)
+	fmt.Println("response Headers:", resp.Header)
+	body, _ := ioutil.ReadAll(resp.Body)
+	fmt.Println("response Body:", string(body))
 }
