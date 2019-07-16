@@ -112,7 +112,5 @@ func TestAmqpSend(t *testing.T) {
 		t.Error(err)
 	}
 	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
-	if err := addAmqpTask(f.amqpCon, f.queue, task); err != nil {
-		t.Error(err)
-	}
+	addAmqpTask(f.amqpCon, f.queue, task)
 }

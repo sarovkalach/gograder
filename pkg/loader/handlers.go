@@ -1,16 +1,19 @@
 package loader
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"text/template"
 	"time"
-	// "github.com/gorilla/sessions"
+
+	"github.com/gorilla/mux"
+	"github.com/sarovkalach/gograder/pkg/grader"
 )
 
 var (
@@ -23,17 +26,6 @@ var (
 
 func logError(args ...interface{}) {
 	log.Println(args...)
-}
-
-func newCookie(id int) http.Cookie {
-	expiration := time.Now().Add(3 * time.Hour)
-	cookie := http.Cookie{
-		Name:     "_cookie",
-		Value:    strconv.Itoa(id), // hardcoderd
-		HttpOnly: true,
-		Expires:  expiration,
-	}
-	return cookie
 }
 
 func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
@@ -58,9 +50,6 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if user.Password == s.Encrypt(r.PostFormValue("password")) {
-		// if err != nil {
-		// 	logError(errCannotCreateSession)
-		// }
 		cookie := newCookie(user.ID)
 		http.SetCookie(w, &cookie)
 		http.Redirect(w, r, "/stat", 302)
@@ -122,6 +111,7 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
+
 	if r.Method == "GET" {
 		t := template.Must(template.ParseFiles("../../web/templates/upload.html"))
 		t.Execute(w, nil)
@@ -136,8 +126,7 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 
 	file, handler, err := r.FormFile("uploadfile")
 	if err != nil {
-		fmt.Println("Error Retrieving the File")
-		fmt.Println(err)
+		fmt.Println("Error Retrieving the File:", err)
 		return
 	}
 	defer file.Close()
@@ -153,4 +142,21 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	}
 	t := template.Must(template.ParseFiles("../../web/templates/success.html"))
 	t.Execute(w, nil)
+}
+
+func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Server Receinve task ID:", mux.Vars(r)["id"])
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		http.Error(w, "can't read body", http.StatusBadRequest)
+		return
+	}
+	result := grader.Result{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		http.Error(w, "Error in unmarshalling JSON", http.StatusInternalServerError)
+	}
+	log.Println("RESULT:", result)
+	w.WriteHeader(http.StatusOK)
+	w.Write(body)
 }

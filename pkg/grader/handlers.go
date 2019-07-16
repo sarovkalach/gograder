@@ -7,11 +7,6 @@ import (
 	"net/http"
 )
 
-// func main() {
-//     http.HandleFunc("/", HelloServer)
-//     http.ListenAndServe(":8080", nil)
-// }
-
 func (g *Grader) ReceiveTask(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -30,6 +25,9 @@ func (g *Grader) ReceiveTask(w http.ResponseWriter, r *http.Request) {
 	if err := json.Unmarshal(body, task); err != nil {
 		http.Error(w, "Error in unmarshalling JSON", http.StatusInternalServerError)
 	}
+	go func() {
+		runTask(task)
+	}()
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }

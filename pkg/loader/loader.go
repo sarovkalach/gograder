@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -24,6 +25,12 @@ var (
 	errOpenChannel        = errors.New("Failed to open a channel")
 	errAMQPDeclare        = errors.New("Failed to declare a queue")
 	errAMQPMessagePublish = errors.New("Failed to publish a message")
+)
+
+var (
+	mysqlDSN = "kalach:1234@/grader?charset=utf8"
+	amqpDSN  = "amqp://guest:guest@localhost:5672/"
+	s3URL    = "127.0.0.1:9000"
 )
 
 type FileLoader struct {
@@ -74,13 +81,12 @@ func NewFileLoader() (*FileLoader, error) {
 }
 
 func (f *FileLoader) initS3() error {
-	endpoint := "127.0.0.1:9000"
 	accessKeyID := "9013HBZHIRHONH8ZIWL6"
 	secretAccessKey := "gKIVgZaWAiuXbugPv9+dT4MKWsKlqxCyXFI+9ys+"
 	useSSL := false
 
 	// Initialize minio client object.
-	minioClient, err := minio.New(endpoint, accessKeyID, secretAccessKey, useSSL)
+	minioClient, err := minio.New(s3URL, accessKeyID, secretAccessKey, useSSL)
 	if err != nil {
 		return errS3connetction
 	}
@@ -89,8 +95,8 @@ func (f *FileLoader) initS3() error {
 }
 
 func (f *FileLoader) initDBCon() error {
-	dsn := "kalach:1234@/grader?charset=utf8"
-	db, err := sql.Open("mysql", dsn)
+	// dsn := "kalach:1234@/grader?charset=utf8"
+	db, err := sql.Open("mysql", mysqlDSN)
 	err = db.Ping() // вот тут будет первое подключение к базе
 	if err != nil {
 		fmt.Println(err)
@@ -101,7 +107,7 @@ func (f *FileLoader) initDBCon() error {
 }
 
 func (f *FileLoader) initAMQPCon() error {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial(amqpDSN)
 	if err != nil {
 		return errAMQPconnetction
 	}
@@ -133,9 +139,21 @@ func (f *FileLoader) initAMQPCon() error {
 func (f *FileLoader) saveUserTask(meta map[string]string) error {
 	filename := meta["filename"]
 	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: filename}
-	addAmqpTask(f.amqpCon, f.queue, task)
-	addDBTask(f.DBCon, task)
-	uploadS3(f.s3Client, task)
+	wg := &sync.WaitGroup{}
+	wg.Add(3)
+	go func() {
+		addDBTask(f.DBCon, task)
+		wg.Done()
+	}()
+	go func() {
+		addAmqpTask(f.amqpCon, f.queue, task)
+		wg.Done()
+	}()
+	go func() {
+		uploadS3(f.s3Client, task)
+		wg.Done()
+	}()
+	wg.Wait()
 	return nil
 }
 
@@ -173,10 +191,10 @@ func addDBTask(db *sql.DB, task *Task) {
 	log.Printf("Successfully saved task to DB %s. ID = %d\n", task.Filename, lastID)
 }
 
-func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) error {
+func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) {
 	ch, err := amqpCon.Channel()
 	if err != nil {
-		return errOpenChannel
+		log.Println(errOpenChannel)
 	}
 	defer ch.Close()
 
@@ -193,8 +211,7 @@ func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) error {
 		})
 
 	if err != nil {
-		return errAMQPMessagePublish
+		log.Println(errAMQPMessagePublish)
 	}
 	log.Printf("Successfully pushed %s to AMQP. Queue: %s\n", task.Filename, queue.Name)
-	return nil
 }

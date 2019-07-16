@@ -21,6 +21,7 @@ var (
 
 var (
 	graderURL = "http://127.0.0.1:8081"
+	amqpDSN   = "amqp://guest:guest@localhost:5672/"
 )
 
 type Queuer struct {
@@ -41,7 +42,7 @@ func NewQueuer() *Queuer {
 }
 
 func (q *Queuer) initAMQPCon() error {
-	conn, err := amqp.Dial("amqp://guest:guest@localhost:5672/")
+	conn, err := amqp.Dial(amqpDSN)
 	if err != nil {
 		return errAMQPconnetction
 	}

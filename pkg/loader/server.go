@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -18,6 +20,17 @@ type Server struct {
 	Router   *mux.Router
 	Uploader *FileLoader
 	// SessionStore *sessions.CookieStore
+}
+
+func newCookie(id int) http.Cookie {
+	expiration := time.Now().Add(3 * time.Hour)
+	cookie := http.Cookie{
+		Name:     "_cookie",
+		Value:    strconv.Itoa(id), // hardcoderd
+		HttpOnly: true,
+		Expires:  expiration,
+	}
+	return cookie
 }
 
 func NewServer() *Server {
@@ -48,6 +61,7 @@ func (s *Server) initRoutes() {
 	s.Router.HandleFunc("/signup_account", s.signupAccount).Methods("POST")
 	s.Router.HandleFunc("/upload", s.upload)
 	s.Router.HandleFunc("/stat", s.stat)
+	s.Router.HandleFunc("/results/{id:[0-9]+}", s.receiverResult).Methods("POST")
 }
 
 func (s *Server) UserByEmail(email string) (*User, error) {
