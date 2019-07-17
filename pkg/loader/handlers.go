@@ -33,7 +33,7 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 	loggedIn := (err != http.ErrNoCookie)
 	if loggedIn {
 		t := template.Must(template.ParseFiles("../../web/templates/stat.html"))
-		tasks := s.GetUserTasks(cookie.Value)
+		tasks := GetUserTasks(s.Uploader.DBCon, cookie.Value)
 		t.Execute(w, tasks)
 	} else {
 		http.Redirect(w, r, "/", 302)
@@ -42,7 +42,7 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
-	user, err := s.UserByEmail(r.PostFormValue("email"))
+	user, err := UserByEmail(s.Uploader.DBCon, r.PostFormValue("email"))
 	if err != nil {
 		logError(errUserNotFound)
 		w.WriteHeader(http.StatusNotFound)
@@ -77,7 +77,7 @@ func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
 		"password": r.PostFormValue("password"),
 	}
 	fmt.Println("signupAccount META:", meta)
-	id, err := s.CreateUser(meta)
+	id, err := CreateUser(s.Uploader.DBCon, meta)
 	if err == errUserIsExists {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(err.Error()))

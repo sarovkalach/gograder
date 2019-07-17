@@ -2,6 +2,7 @@ package loader
 
 import (
 	"crypto/sha256"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log"
@@ -64,8 +65,8 @@ func (s *Server) initRoutes() {
 	s.Router.HandleFunc("/results/{id:[0-9]+}", s.receiverResult).Methods("POST")
 }
 
-func (s *Server) UserByEmail(email string) (*User, error) {
-	row := s.Uploader.DBCon.QueryRow("SELECT * FROM users where email = ?", email)
+func UserByEmail(DBCon *sql.DB, email string) (*User, error) {
+	row := DBCon.QueryRow("SELECT * FROM users where email = ?", email)
 	user := &User{}
 	// err := row.Scan(&user.Id, &user.Email, &user.Password, &user.FirstName, &user.LastName)
 	err := row.Scan(&user.ID, &user.Email, &user.Password)
@@ -77,14 +78,14 @@ func (s *Server) UserByEmail(email string) (*User, error) {
 	return user, nil
 }
 
-func (s *Server) CreateUser(meta map[string]string) (int, error) {
-	_, err := s.UserByEmail(meta["email"])
+func CreateUser(DBCon *sql.DB, meta map[string]string) (int, error) {
+	_, err := UserByEmail(DBCon, meta["email"])
 	if err == nil {
 		return 0, errUserIsExists
 	}
 
 	hashedPasswd := fmt.Sprintf("%x", sha256.Sum256([]byte(meta["password"])))
-	result, err := s.Uploader.DBCon.Exec(
+	result, err := DBCon.Exec(
 		"INSERT INTO users (`email`, `password`) VALUES (?, ?)",
 		meta["email"],
 		hashedPasswd,
@@ -103,19 +104,20 @@ func (s *Server) Encrypt(passwd string) string {
 	return hashedPasswd
 }
 
-func (s *Server) GetUserTasks(id string) []Task {
-	rows, err := s.Uploader.DBCon.Query("SELECT * FROM tasks WHERE  user = ?", "kalach")
+func GetUserTasks(DBCon *sql.DB, id string) []Task {
+	userID, _ := strconv.Atoi(id)
+	rows, err := DBCon.Query("SELECT * FROM tasks WHERE user_id = ?", userID)
 	if err != nil {
 		log.Println("SELECT Error:", err)
 	}
 	tasks := make([]Task, 0, 16)
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.ID, &task.Graded, &task.Course, &task.Task, &task.User, &task.Filename)
+		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.UserID)
 		if err != nil {
 			log.Println("SELECT Error Read:", err)
 		}
-		fmt.Println(task)
+		// fmt.Println(task)
 		tasks = append(tasks, *task)
 	}
 	rows.Close()

@@ -43,11 +43,11 @@ type FileLoader struct {
 
 type Task struct {
 	ID       int
-	Graded   bool
+	Status   int
 	Course   string
-	Task     string
-	User     string
+	Name     string
 	Filename string
+	UserID   int
 }
 
 func showDBTasks(db *sql.DB) {
@@ -57,7 +57,7 @@ func showDBTasks(db *sql.DB) {
 	}
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.ID, &task.Graded, &task.Course, &task.Task, &task.User, &task.Filename)
+		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.UserID)
 		if err != nil {
 			log.Println("SELECT Error Read:", err)
 		}
@@ -138,7 +138,7 @@ func (f *FileLoader) initAMQPCon() error {
 
 func (f *FileLoader) saveUserTask(meta map[string]string) error {
 	filename := meta["filename"]
-	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: filename}
+	task := &Task{Course: "Golang", Status: 0, Name: "hw9", Filename: filename, UserID: 1}
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
@@ -175,11 +175,12 @@ func uploadS3(s3Client *minio.Client, task *Task) {
 
 func addDBTask(db *sql.DB, task *Task) {
 	result, err := db.Exec(
-		"INSERT INTO tasks (`course`, `task`, `user`, `filename`) VALUES (?, ?, ?, ?)",
+		"INSERT INTO tasks (`status`, `course`, `name`, `filename`, `user_id`) VALUES (?, ?, ?, ?,?)",
+		task.Status,
 		task.Course,
-		task.Task,
-		task.User,
+		task.Name,
 		task.Filename,
+		task.UserID,
 	)
 	if err != nil {
 		log.Println("INSERT Error:", err)
@@ -207,7 +208,7 @@ func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) {
 			ContentType: "text/plain",
 			// UserId:      task.User,
 			// Type:        task.Course,
-			Body: []byte(task.Task),
+			Body: []byte(task.Name),
 		})
 
 	if err != nil {

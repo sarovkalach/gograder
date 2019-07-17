@@ -18,7 +18,7 @@ func TestUpload(t *testing.T) {
 		t.Error(err)
 	}
 	file.Close()
-	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
+	task := &Task{Course: "Golang", Name: "hw9", Status: 0, Filename: "hw9.go", UserID: 1}
 	uploadS3(f.s3Client, task)
 }
 
@@ -31,9 +31,32 @@ func TestDBInsertTask(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
+	task := &Task{Course: "Golang", Name: "hw9", Status: 0, Filename: "hw9.go", UserID: 1}
 	addDBTask(f.DBCon, task)
 }
+
+// func TestDBInsertTask(t *testing.T) {
+// 	db, mock, err := sqlmock.New()
+// 	if err != nil {
+// 		t.Fatalf("an error '%s' was not expected when opening a stub database connection", err)
+// 	}
+// 	defer db.Close()
+
+// 	task := &Task{Course: "Golang", Name: "hw9", Status: 0, Filename: "hw9.go", UserID: 1}
+// 	mock.ExpectExec("INSERT INTO tasks (`status`, `course`, `name`, `filename`, `user_id`) VALUES (?, ?, ?, ?,?)").WithArgs(
+// 		task.Status,
+// 		task.Course,
+// 		task.Name,
+// 		task.Filename,
+// 		task.UserID,
+// 	)
+// 	addDBTask(db, task)
+// 	// mock.ExpectBegin()
+// 	// mock.ExpectExec("UPDATE products").WillReturnResult(sqlmock.NewResult(1, 1))
+// 	// mock.ExpectExec("INSERT INTO product_viewers").WithArgs(2, 3).WillReturnResult(sqlmock.NewResult(1, 1))
+// 	// mock.ExpectCommit()
+
+// }
 
 func TestDBInsertUser(t *testing.T) {
 	f, err := NewFileLoader()
@@ -95,7 +118,7 @@ func TestDBSelectTasks(t *testing.T) {
 	tasks := make([]Task, 0, 16)
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.ID, &task.Graded, &task.Course, &task.Task, &task.User, &task.Filename)
+		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.UserID)
 		if err != nil {
 			log.Println("SELECT Error Read:", err)
 		}
@@ -111,6 +134,6 @@ func TestAmqpSend(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	task := &Task{Course: "Golang", Task: "Grader", User: "kalach", Graded: false, Filename: "test.txt"}
+	task := &Task{Course: "Golang", Name: "hw9", Status: 0, Filename: "hw9.go", UserID: 1}
 	addAmqpTask(f.amqpCon, f.queue, task)
 }
