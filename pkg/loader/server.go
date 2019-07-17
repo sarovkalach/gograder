@@ -72,7 +72,6 @@ func UserByEmail(DBCon *sql.DB, email string) (*User, error) {
 	err := row.Scan(&user.ID, &user.Email, &user.Password)
 	if err != nil {
 		//check User exists
-		fmt.Println("ERROR UserByEmail:", err)
 		return nil, err
 	}
 	return user, nil
@@ -104,7 +103,7 @@ func (s *Server) Encrypt(passwd string) string {
 	return hashedPasswd
 }
 
-func GetUserTasks(DBCon *sql.DB, id string) []Task {
+func GetTask(DBCon *sql.DB, id string) []Task {
 	userID, _ := strconv.Atoi(id)
 	rows, err := DBCon.Query("SELECT * FROM tasks WHERE user_id = ?", userID)
 	if err != nil {

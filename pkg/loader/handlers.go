@@ -33,7 +33,7 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 	loggedIn := (err != http.ErrNoCookie)
 	if loggedIn {
 		t := template.Must(template.ParseFiles("../../web/templates/stat.html"))
-		tasks := GetUserTasks(s.Uploader.DBCon, cookie.Value)
+		tasks := GetTask(s.Uploader.DBCon, cookie.Value)
 		t.Execute(w, tasks)
 	} else {
 		http.Redirect(w, r, "/", 302)
