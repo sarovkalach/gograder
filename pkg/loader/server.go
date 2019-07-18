@@ -3,6 +3,7 @@ package loader
 import (
 	"crypto/sha256"
 	"database/sql"
+	"encoding/gob"
 	"errors"
 	"fmt"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 )
 
 var (
@@ -20,7 +22,7 @@ var (
 type Server struct {
 	Router   *mux.Router
 	Uploader *FileLoader
-	// SessionStore *sessions.CookieStore
+	ss       *sessions.CookieStore
 }
 
 func newCookie(id int) http.Cookie {
@@ -42,9 +44,11 @@ func NewServer() *Server {
 	s := &Server{
 		Router:   mux.NewRouter(),
 		Uploader: uploader,
-		// SessionStore: sessions.NewCookieStore([]byte(os.Getenv("TEST"))),
+		// it must no be saved in code or smth else. Only by os.Getenv. Hardcoded
+		ss: sessions.NewCookieStore([]byte("PRIVATE")),
 	}
 	s.initRoutes()
+	gob.Register(User{})
 	return s
 }
 
@@ -100,7 +104,7 @@ func CreateUser(DBCon *sql.DB, meta map[string]string) (int, error) {
 	return int(lastID), nil
 }
 
-func (s *Server) Encrypt(passwd string) string {
+func Encrypt(passwd string) string {
 	hashedPasswd := fmt.Sprintf("%x", sha256.Sum256([]byte(passwd)))
 	return hashedPasswd
 }

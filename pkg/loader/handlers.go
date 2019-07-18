@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"os"
 	"text/template"
-	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/gorilla/sessions"
 	"github.com/sarovkalach/gograder/pkg/grader"
 )
 
@@ -46,27 +46,58 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
+	session, err := s.ss.Get(r, "_cookie")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	user, err := UserByEmail(s.Uploader.DBCon, r.PostFormValue("email"))
+
 	if err != nil {
 		logError(errUserNotFound)
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte("User not found"))
 		return
 	}
-	if user.Password == s.Encrypt(r.PostFormValue("password")) {
-		cookie := newCookie(user.ID)
-		http.SetCookie(w, &cookie)
+
+	if user.Password == Encrypt(r.PostFormValue("password")) {
+		session.Values["user"] = user
+		err = session.Save(r, w)
+		if err := checkErr(session, r, w); err != nil {
+			return
+		}
 		http.Redirect(w, r, "/stat", 302)
-	} else {
-		http.Redirect(w, r, "/login", 302)
+		return
 	}
+
+	session.Options.MaxAge = -1
+	if err := checkErr(session, r, w); err != nil {
+		return
+	}
+	// err = session.Save(r, w)
+	// if err != nil {
+	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
+	// 	return
+	// }
+	http.Redirect(w, r, "/login", 302)
 }
 
+func checkErr(session *sessions.Session, r *http.Request, w http.ResponseWriter) error {
+	err := session.Save(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return err
+	}
+	return nil
+}
+
+//main page
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("../../web/templates/index.html"))
 	t.Execute(w, nil)
 }
 
+// registration form
 func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
 	t := template.Must(template.ParseFiles("../../web/templates/signup.html"))
 	t.Execute(w, nil)
@@ -94,18 +125,35 @@ func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
+	session, _ := s.ss.Get(r, "_cookie")
+	if err := checkErr(session, r, w); err != nil {
+		return
+	}
+	if !session.IsNew {
+		http.Redirect(w, r, "/stat", http.StatusFound)
+		return
+	}
+
 	t := template.Must(template.ParseFiles("../../web/templates/login.html"))
+	if err := checkErr(session, r, w); err != nil {
+		return
+	}
 	t.Execute(w, nil)
 }
 
 func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
-	session, err := r.Cookie("_cookie")
-	if err == http.ErrNoCookie {
-		http.Redirect(w, r, "/", http.StatusFound)
+	session, err := s.ss.Get(r, "_cookie")
+	if err != nil {
+		log.Println("logout:", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	session.Expires = time.Now().AddDate(0, 0, -1)
-	http.SetCookie(w, session)
+
+	session.Values["user"] = User{}
+	session.Options.MaxAge = -1
+	if err := checkErr(session, r, w); err != nil {
+		return
+	}
 	http.Redirect(w, r, "/", http.StatusFound)
 }
 
@@ -154,7 +202,9 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	defer f.Close()
 	io.Copy(f, file)
 
-	meta := map[string]string{"filename": handler.Filename}
+	meta := map[string]string{
+		"filename": handler.Filename,
+	}
 	if err := s.Uploader.saveUserTask(meta); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Internal server Error"))
