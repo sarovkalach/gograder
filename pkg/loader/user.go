@@ -18,7 +18,3 @@ type Session struct {
 	UserId    int
 	CreatedAt time.Time
 }
-
-func (u *User) CreateSession() (*Session, error) {
-	return &Session{}, nil
-}

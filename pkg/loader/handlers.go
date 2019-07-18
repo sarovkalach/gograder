@@ -24,6 +24,10 @@ var (
 	errDBiternal           = errors.New("Internal DB error")
 )
 
+var (
+	maxFileSize = 5 * 1024 * 1025
+)
+
 func logError(args ...interface{}) {
 	log.Println(args...)
 }
@@ -71,7 +75,7 @@ func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
 	// fmt.Println("SingupAccount", r.FormValue("email"))
-	r.ParseMultipartForm(5 * 1024 * 1025)
+	r.ParseMultipartForm(int64(maxFileSize))
 	meta := map[string]string{
 		"email":    r.PostFormValue("email"),
 		"password": r.PostFormValue("password"),
@@ -118,10 +122,25 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = r.ParseMultipartForm(5 * 1024 * 1025)
+	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad file consistent"))
+		return
+	}
+	defer r.Body.Close()
+
+	if len(body) > maxFileSize {
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Huge file"))
+		return
+	}
+
+	err = r.ParseMultipartForm(int64(maxFileSize))
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Content-Type isn't multipart/form-data"))
+		return
 	}
 
 	file, handler, err := r.FormFile("uploadfile")
@@ -152,6 +171,8 @@ func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "can't read body", http.StatusBadRequest)
 		return
 	}
+	defer r.Body.Close()
+
 	result := grader.Result{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		http.Error(w, "Error in unmarshalling JSON", http.StatusInternalServerError)

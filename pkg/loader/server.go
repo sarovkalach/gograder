@@ -66,9 +66,8 @@ func (s *Server) initRoutes() {
 }
 
 func UserByEmail(DBCon *sql.DB, email string) (*User, error) {
-	row := DBCon.QueryRow("SELECT * FROM users where email = ?", email)
+	row := DBCon.QueryRow("SELECT * FROM users WHERE email = ?", email)
 	user := &User{}
-	// err := row.Scan(&user.Id, &user.Email, &user.Password, &user.FirstName, &user.LastName)
 	err := row.Scan(&user.ID, &user.Email, &user.Password)
 	if err != nil {
 		//check User exists
@@ -90,6 +89,9 @@ func CreateUser(DBCon *sql.DB, meta map[string]string) (int, error) {
 		hashedPasswd,
 	)
 
+	if err != nil {
+		return 0, errDBiternal
+	}
 	lastID, err := result.LastInsertId()
 	if err != nil {
 		log.Println("Error reading Last ID", err)
