@@ -69,7 +69,7 @@ func TestDBInsertUser(t *testing.T) {
 		// "INSERT INTO users (`email`, `password`, `last_name`, `first_name`) VALUES (?, ?, ?, ?)",
 		"INSERT INTO users (`email`, `password`) VALUES (?, ?)",
 		user.Email,
-		user.Password,
+		Encrypt(user.Password),
 		// user.LastName,
 		// user.FirstName,
 	)

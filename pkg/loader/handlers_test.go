@@ -35,6 +35,18 @@ func TestReceiverResult(t *testing.T) {
 	}
 }
 
+func TestLogin(t *testing.T) {
+	req, _ := http.NewRequest("GET", "http://127.0.0.1:8080/login", nil)
+	s := NewServer()
+	rr := httptest.NewRecorder()
+	handler := http.HandlerFunc(s.login)
+	handler.ServeHTTP(rr, req)
+	if status := rr.Code; status != http.StatusOK {
+		t.Errorf("handler returned wrong status code: got %v want %v",
+			status, http.StatusInternalServerError)
+	}
+}
+
 func TestUploadHandler(t *testing.T) {
 	//without cookie
 	req, _ := http.NewRequest("GET", "http://127.0.0.1:8080/upload", nil)
@@ -46,10 +58,9 @@ func TestUploadHandler(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v",
 			status, http.StatusOK)
 	}
+
 	// with cookie
 	cookie := newCookie(1)
-	req, _ = http.NewRequest("GET", "http://127.0.0.1:8080/upload", nil)
-	rr = httptest.NewRecorder()
 	req.AddCookie(&cookie)
 	handler.ServeHTTP(rr, req)
 	if status := rr.Code; status != http.StatusOK {

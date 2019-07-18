@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	errUserNotFound        = errors.New("User not found")
+	errBadLogopass         = errors.New("Bad credentials")
 	errCannotCreateSession = errors.New("Cannot create session")
 	errCannotParseForm     = errors.New("Cannot parse form")
 	errCannotCreateUser    = errors.New("Cannot create user")
@@ -30,6 +30,16 @@ var (
 
 func logError(args ...interface{}) {
 	log.Println(args...)
+}
+
+// return error if were errors while save session
+func saveSessionErr(session *sessions.Session, r *http.Request, w http.ResponseWriter) error {
+	err := session.Save(r, w)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return err
+	}
+	return nil
 }
 
 func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
@@ -54,41 +64,22 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 	user, err := UserByEmail(s.Uploader.DBCon, r.PostFormValue("email"))
 
 	if err != nil {
-		logError(errUserNotFound)
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte("User not found"))
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 
-	if user.Password == Encrypt(r.PostFormValue("password")) {
-		session.Values["user"] = user
-		err = session.Save(r, w)
-		if err := checkErr(session, r, w); err != nil {
-			return
-		}
-		http.Redirect(w, r, "/stat", 302)
+	if user.Password != Encrypt(r.PostFormValue("password")) {
+		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
 
-	session.Options.MaxAge = -1
-	if err := checkErr(session, r, w); err != nil {
+	session.Values["user"] = user
+	if err := saveSessionErr(session, r, w); err != nil {
 		return
 	}
-	// err = session.Save(r, w)
-	// if err != nil {
-	// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-	// 	return
-	// }
-	http.Redirect(w, r, "/login", 302)
-}
+	http.Redirect(w, r, "/stat", http.StatusFound)
+	return
 
-func checkErr(session *sessions.Session, r *http.Request, w http.ResponseWriter) error {
-	err := session.Save(r, w)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return err
-	}
-	return nil
 }
 
 //main page
@@ -109,7 +100,7 @@ func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
 	r.ParseMultipartForm(int64(maxFileSize))
 	meta := map[string]string{
 		"email":    r.PostFormValue("email"),
-		"password": r.PostFormValue("password"),
+		"password": Encrypt(r.PostFormValue("password")),
 	}
 	fmt.Println("signupAccount META:", meta)
 	id, err := CreateUser(s.Uploader.DBCon, meta)
@@ -125,19 +116,18 @@ func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
-	session, _ := s.ss.Get(r, "_cookie")
-	if err := checkErr(session, r, w); err != nil {
+	session, err := s.ss.Get(r, "_cookie")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	if !session.IsNew {
 		http.Redirect(w, r, "/stat", http.StatusFound)
 		return
 	}
 
 	t := template.Must(template.ParseFiles("../../web/templates/login.html"))
-	if err := checkErr(session, r, w); err != nil {
-		return
-	}
 	t.Execute(w, nil)
 }
 
@@ -151,7 +141,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 
 	session.Values["user"] = User{}
 	session.Options.MaxAge = -1
-	if err := checkErr(session, r, w); err != nil {
+	if err := saveSessionErr(session, r, w); err != nil {
 		return
 	}
 	http.Redirect(w, r, "/", http.StatusFound)
