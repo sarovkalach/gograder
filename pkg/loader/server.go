@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -25,16 +23,16 @@ type Server struct {
 	ss       *sessions.CookieStore
 }
 
-func newCookie(id int) http.Cookie {
-	expiration := time.Now().Add(3 * time.Hour)
-	cookie := http.Cookie{
-		Name:     "_cookie",
-		Value:    strconv.Itoa(id), // hardcoderd
-		HttpOnly: true,
-		Expires:  expiration,
-	}
-	return cookie
-}
+// func newCookie(id int) http.Cookie {
+// 	expiration := time.Now().Add(3 * time.Hour)
+// 	cookie := http.Cookie{
+// 		Name:     "_cookie",
+// 		Value:    strconv.Itoa(id), // hardcoderd
+// 		HttpOnly: true,
+// 		Expires:  expiration,
+// 	}
+// 	return cookie
+// }
 
 func NewServer() *Server {
 	uploader, err := NewFileLoader()
@@ -45,10 +43,10 @@ func NewServer() *Server {
 		Router:   mux.NewRouter(),
 		Uploader: uploader,
 		// it must no be saved in code or smth else. Only by os.Getenv. Hardcoded
-		ss: sessions.NewCookieStore([]byte("PRIVATE")),
+		ss: sessions.NewCookieStore([]byte("PRI")),
 	}
 	s.initRoutes()
-	gob.Register(User{})
+	gob.Register(SessionUser{})
 	return s
 }
 
@@ -86,11 +84,10 @@ func CreateUser(DBCon *sql.DB, meta map[string]string) (int, error) {
 		return 0, errUserIsExists
 	}
 
-	hashedPasswd := fmt.Sprintf("%x", sha256.Sum256([]byte(meta["password"])))
 	result, err := DBCon.Exec(
 		"INSERT INTO users (`email`, `password`) VALUES (?, ?)",
 		meta["email"],
-		hashedPasswd,
+		meta["password"],
 	)
 
 	if err != nil {
@@ -109,8 +106,7 @@ func Encrypt(passwd string) string {
 	return hashedPasswd
 }
 
-func GetTask(DBCon *sql.DB, id string) []Task {
-	userID, _ := strconv.Atoi(id)
+func GetTask(DBCon *sql.DB, userID int) []Task {
 	rows, err := DBCon.Query("SELECT * FROM tasks WHERE user_id = ?", userID)
 	if err != nil {
 		log.Println("SELECT Error:", err)

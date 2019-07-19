@@ -43,11 +43,15 @@ func saveSessionErr(session *sessions.Session, r *http.Request, w http.ResponseW
 }
 
 func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
-	cookie, err := r.Cookie("_cookie")
-	loggedIn := (err != http.ErrNoCookie)
-	if loggedIn {
+	session, err := s.ss.Get(r, "_cookie")
+	fmt.Println("SESSION VALUES:", session.Values)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if !session.IsNew {
 		t := template.Must(template.ParseFiles("../../web/templates/stat.html"))
-		tasks := GetTask(s.Uploader.DBCon, cookie.Value)
+		tasks := GetTask(s.Uploader.DBCon, session.Values["user"].(SessionUser).ID)
 		t.Execute(w, tasks)
 	} else {
 		http.Redirect(w, r, "/", 302)
@@ -73,7 +77,9 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session.Values["user"] = user
+	session.Values["user"] = SessionUser{ID: user.ID, Authenticated: true}
+	session.Values["test"] = "Test"
+
 	if err := saveSessionErr(session, r, w); err != nil {
 		return
 	}
@@ -96,7 +102,17 @@ func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
-	// fmt.Println("SingupAccount", r.FormValue("email"))
+	session, err := s.ss.Get(r, "_cookie")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if !session.IsNew {
+		http.Redirect(w, r, "/stat", http.StatusFound)
+		return
+	}
+
 	r.ParseMultipartForm(int64(maxFileSize))
 	meta := map[string]string{
 		"email":    r.PostFormValue("email"),
@@ -110,9 +126,12 @@ func (s *Server) signupAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie := newCookie(id)
-	http.SetCookie(w, &cookie)
-	http.Redirect(w, r, "/stat", 302)
+	session.Values["user"] = SessionUser{ID: id, Authenticated: true}
+	if err := saveSessionErr(session, r, w); err != nil {
+		return
+	}
+	http.Redirect(w, r, "/stat", http.StatusFound)
+
 }
 
 func (s *Server) login(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +158,9 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	session.Values["user"] = User{}
+	user := session.Values["user"].(SessionUser)
+	user.Authenticated = false
+	session.Values["user"] = user
 	session.Options.MaxAge = -1
 	if err := saveSessionErr(session, r, w); err != nil {
 		return
