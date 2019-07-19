@@ -10,6 +10,7 @@ CREATE TABLE `tasks` (
   `course` varchar(255) NOT NULL,
   `name` varchar(255) NOT NULL,
   `filename` varchar(255) NOT NULL,
+  `s3bucketname` varchar(255) NOT NULL,
   `user_id` int(11) NOT NULL,
   FOREIGN KEY (`user_id`) REFERENCES `users`(`id`)
       ON UPDATE CASCADE

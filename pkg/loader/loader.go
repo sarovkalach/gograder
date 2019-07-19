@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strconv"
 	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -28,9 +29,10 @@ var (
 )
 
 var (
-	mysqlDSN = "kalach:1234@/grader?charset=utf8"
-	amqpDSN  = "amqp://guest:guest@localhost:5672/"
-	s3URL    = "127.0.0.1:9000"
+	mysqlDSN     = "kalach:1234@/grader?charset=utf8"
+	amqpDSN      = "amqp://guest:guest@localhost:5672/"
+	s3URL        = "127.0.0.1:9000"
+	defaultQueue = "grader"
 )
 
 type FileLoader struct {
@@ -42,12 +44,13 @@ type FileLoader struct {
 }
 
 type Task struct {
-	ID       int
-	Status   int
-	Course   string
-	Name     string
-	Filename string
-	UserID   int
+	ID           int
+	Status       int
+	Course       string
+	Name         string
+	Filename     string
+	S3BucketName string
+	UserID       int
 }
 
 func showDBTasks(db *sql.DB) {
@@ -57,7 +60,7 @@ func showDBTasks(db *sql.DB) {
 	}
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.UserID)
+		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.S3BucketName, &task.UserID)
 		if err != nil {
 			log.Println("SELECT Error Read:", err)
 		}
@@ -120,12 +123,12 @@ func (f *FileLoader) initAMQPCon() error {
 	defer ch.Close()
 
 	q, err := ch.QueueDeclare(
-		"grader", // name
-		false,    // durable
-		false,    // delete when unused
-		false,    // exclusive
-		false,    // no-wait
-		nil,      // arguments
+		defaultQueue, // name
+		false,        // durable
+		false,        // delete when unused
+		false,        // exclusive
+		false,        // no-wait
+		nil,          // arguments
 	)
 	if err != nil {
 		return errAMQPDeclare
@@ -137,8 +140,14 @@ func (f *FileLoader) initAMQPCon() error {
 }
 
 func (f *FileLoader) saveUserTask(meta map[string]string) error {
-	filename := meta["filename"]
-	task := &Task{Course: "Golang", Status: 0, Name: "hw9", Filename: filename, UserID: 1}
+	id, _ := strconv.Atoi(meta["user_id"])
+	task := &Task{
+		Course:       meta["course"],
+		Name:         meta["name"],
+		Filename:     meta["filename"],
+		S3BucketName: meta["bucket"],
+		UserID:       id,
+	}
 	wg := &sync.WaitGroup{}
 	wg.Add(3)
 	go func() {
@@ -166,7 +175,7 @@ func uploadS3(s3Client *minio.Client, task *Task) {
 	}
 	defer file.Close()
 
-	n, err := s3Client.FPutObject("grader", filename, filePath, minio.PutObjectOptions{ContentType: "text/txt"})
+	n, err := s3Client.FPutObject(task.S3BucketName, filename, filePath, minio.PutObjectOptions{ContentType: "text/txt"})
 	if err != nil {
 		log.Fatalln(err, filePath, filename)
 	}
@@ -175,11 +184,12 @@ func uploadS3(s3Client *minio.Client, task *Task) {
 
 func addDBTask(db *sql.DB, task *Task) {
 	result, err := db.Exec(
-		"INSERT INTO tasks (`status`, `course`, `name`, `filename`, `user_id`) VALUES (?, ?, ?, ?,?)",
+		"INSERT INTO tasks (`status`, `course`, `name`, `filename`, s3bucketname,`user_id`) VALUES (?, ?, ?, ?,?,?)",
 		task.Status,
 		task.Course,
 		task.Name,
 		task.Filename,
+		task.S3BucketName,
 		task.UserID,
 	)
 	if err != nil {
@@ -208,7 +218,7 @@ func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) {
 			ContentType: "text/plain",
 			// UserId:      task.User,
 			// Type:        task.Course,
-			Body: []byte(task.Name),
+			Body: []byte(task.S3BucketName + "/" + task.Name),
 		})
 
 	if err != nil {

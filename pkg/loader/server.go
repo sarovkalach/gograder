@@ -8,8 +8,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -23,17 +21,6 @@ type Server struct {
 	Router   *mux.Router
 	Uploader *FileLoader
 	ss       *sessions.CookieStore
-}
-
-func newCookie(id int) http.Cookie {
-	expiration := time.Now().Add(3 * time.Hour)
-	cookie := http.Cookie{
-		Name:     "_cookie",
-		Value:    strconv.Itoa(id), // hardcoderd
-		HttpOnly: true,
-		Expires:  expiration,
-	}
-	return cookie
 }
 
 func NewServer() *Server {
@@ -103,11 +90,6 @@ func CreateUser(DBCon *sql.DB, meta map[string]string) (int, error) {
 	return int(lastID), nil
 }
 
-func Encrypt(passwd string) string {
-	hashedPasswd := fmt.Sprintf("%x", sha256.Sum256([]byte(passwd)))
-	return hashedPasswd
-}
-
 func GetTask(DBCon *sql.DB, userID int) []Task {
 	rows, err := DBCon.Query("SELECT * FROM tasks WHERE user_id = ?", userID)
 	if err != nil {
@@ -116,7 +98,7 @@ func GetTask(DBCon *sql.DB, userID int) []Task {
 	tasks := make([]Task, 0, 16)
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.UserID)
+		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.S3BucketName, &task.UserID)
 		if err != nil {
 			log.Println("SELECT Error Read:", err)
 		}
@@ -125,4 +107,9 @@ func GetTask(DBCon *sql.DB, userID int) []Task {
 	}
 	rows.Close()
 	return tasks
+}
+
+func Encrypt(passwd string) string {
+	hashedPasswd := fmt.Sprintf("%x", sha256.Sum256([]byte(passwd)))
+	return hashedPasswd
 }

@@ -3,19 +3,34 @@ package grader
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os/exec"
 	"time"
+
+	"github.com/minio/minio-go/v6"
 )
 
 var (
 	callBackURL = "http://127.0.0.1:8080/results/1"
 )
 
+var (
+	errS3connetction = errors.New("Can not connect to S3")
+)
+
+var (
+	mysqlDSN     = "kalach:1234@/grader?charset=utf8"
+	amqpDSN      = "amqp://guest:guest@localhost:5672/"
+	s3URL        = "127.0.0.1:9000"
+	defaultQueue = "grader"
+)
+
 type Grader struct {
+	s3Client *minio.Client
 }
 
 type Task struct {
@@ -30,6 +45,11 @@ type Result struct {
 }
 
 func NewGrader() *Grader {
+	g := &Grader{}
+	err := g.initS3()
+	if err != nil {
+		panic(err)
+	}
 	return &Grader{}
 }
 
@@ -39,8 +59,22 @@ func (g *Grader) Run() {
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
 
+func (g *Grader) initS3() error {
+	accessKeyID := "9013HBZHIRHONH8ZIWL6"
+	secretAccessKey := "gKIVgZaWAiuXbugPv9+dT4MKWsKlqxCyXFI+9ys+"
+	useSSL := false
+
+	// Initialize minio client object.
+	minioClient, err := minio.New(s3URL, accessKeyID, secretAccessKey, useSSL)
+	if err != nil {
+		return errS3connetction
+	}
+	g.s3Client = minioClient
+	return nil
+}
+
 func runTask(t *Task) {
-	cmd := exec.Command("taouch", "/home/kalach/Grader_Command.txt")
+	cmd := exec.Command("touch", "/home/kalach/Grader_Command.txt")
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
 		sendResult(res)

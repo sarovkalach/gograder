@@ -118,7 +118,7 @@ func TestDBSelectTasks(t *testing.T) {
 	tasks := make([]Task, 0, 16)
 	for rows.Next() {
 		task := &Task{}
-		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.UserID)
+		err = rows.Scan(&task.ID, &task.Status, &task.Course, &task.Name, &task.Filename, &task.S3BucketName, &task.UserID)
 		if err != nil {
 			log.Println("SELECT Error Read:", err)
 		}

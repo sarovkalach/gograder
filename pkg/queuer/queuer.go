@@ -2,6 +2,7 @@ package queuer
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -20,8 +21,10 @@ var (
 )
 
 var (
-	graderURL = "http://127.0.0.1:8081"
-	amqpDSN   = "amqp://guest:guest@localhost:5672/"
+	graderURL      = "http://127.0.0.1:8081"
+	amqpDSN        = "amqp://guest:guest@localhost:5672/"
+	defaultQueue   = "grader"
+	defaultTimeout = 300
 )
 
 type Queuer struct {
@@ -30,6 +33,11 @@ type Queuer struct {
 	messageCh chan amqp.Delivery
 	stopCh    chan bool
 	// tasks chan amqp.
+}
+
+type GraderTask struct {
+	Name    string `json:"name"`
+	Timeout int    `json:"timeout"`
 }
 
 func NewQueuer() *Queuer {
@@ -55,12 +63,12 @@ func (q *Queuer) initAMQPCon() error {
 	defer ch.Close()
 
 	queue, err := ch.QueueDeclare(
-		"grader", // name
-		false,    // durable
-		false,    // delete when unused
-		false,    // exclusive
-		false,    // no-wait
-		nil,      // arguments
+		defaultQueue, // name
+		false,        // durable
+		false,        // delete when unused
+		false,        // exclusive
+		false,        // no-wait
+		nil,          // arguments
 	)
 	if err != nil {
 		return errAMQPDeclare
@@ -79,13 +87,13 @@ func (q *Queuer) Run() error {
 	defer ch.Close()
 
 	msgs, err := ch.Consume(
-		"grader", // queue
-		"",       // consumer
-		true,     // auto-ack
-		false,    // exclusive
-		false,    // no-local
-		false,    // no-wait
-		nil,      // args
+		defaultQueue, // queue
+		"",           // consumer
+		true,         // auto-ack
+		false,        // exclusive
+		false,        // no-local
+		false,        // no-wait
+		nil,          // args
 	)
 	if err != nil {
 		return errRegisterConsumer
@@ -95,7 +103,7 @@ func (q *Queuer) Run() error {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
 			q.messageCh <- d
-			q.SendTask()
+			q.SendTask(string(d.Body))
 		}
 	}()
 
@@ -108,11 +116,17 @@ func (q *Queuer) Stop() {
 	q.stopCh <- true
 }
 
-func (q *Queuer) SendTask() {
+func (q *Queuer) SendTask(task string) {
 
 	fmt.Println("URL:>", graderURL)
-	var jsonStr = []byte(`{"name":"Test message", "timeout":3}`)
-	req, err := http.NewRequest("POST", graderURL, bytes.NewBuffer(jsonStr))
+
+	jsonTask, err := json.Marshal(GraderTask{Name: task, Timeout: defaultTimeout})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	// var jsonStr = []byte(`{"name":"Test message", "timeout":3}`)
+	req, err := http.NewRequest("POST", graderURL, bytes.NewBuffer(jsonTask))
 	if err != nil {
 		log.Println("NewRequest ERR:", err)
 	}

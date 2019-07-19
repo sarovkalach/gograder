@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"text/template"
 
 	"github.com/gorilla/mux"
@@ -169,15 +170,19 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
-	_, err := r.Cookie("_cookie")
-	if err == http.ErrNoCookie {
-		http.Redirect(w, r, "/", http.StatusFound)
-		return
-	}
-
 	if r.Method == "GET" {
 		t := template.Must(template.ParseFiles("../../web/templates/upload.html"))
 		t.Execute(w, nil)
+		return
+	}
+
+	session, err := s.ss.Get(r, "_cookie")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if session.IsNew {
+		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
 
@@ -215,6 +220,9 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 
 	meta := map[string]string{
 		"filename": handler.Filename,
+		"user_id":  strconv.Itoa(session.Values["user"].(SessionUser).ID),
+		"course":   "golang", //	hardcoded
+		"name":     "hw9",    //	hardcoded
 	}
 	if err := s.Uploader.saveUserTask(meta); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
