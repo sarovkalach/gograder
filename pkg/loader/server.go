@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -23,16 +25,16 @@ type Server struct {
 	ss       *sessions.CookieStore
 }
 
-// func newCookie(id int) http.Cookie {
-// 	expiration := time.Now().Add(3 * time.Hour)
-// 	cookie := http.Cookie{
-// 		Name:     "_cookie",
-// 		Value:    strconv.Itoa(id), // hardcoderd
-// 		HttpOnly: true,
-// 		Expires:  expiration,
-// 	}
-// 	return cookie
-// }
+func newCookie(id int) http.Cookie {
+	expiration := time.Now().Add(3 * time.Hour)
+	cookie := http.Cookie{
+		Name:     "_cookie",
+		Value:    strconv.Itoa(id), // hardcoderd
+		HttpOnly: true,
+		Expires:  expiration,
+	}
+	return cookie
+}
 
 func NewServer() *Server {
 	uploader, err := NewFileLoader()
