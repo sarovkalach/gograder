@@ -12,9 +12,7 @@ import (
 	"strconv"
 	"text/template"
 
-	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
-	"github.com/sarovkalach/gograder/pkg/grader"
 )
 
 var (
@@ -69,12 +67,14 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 	user, err := UserByEmail(s.Uploader.DBCon, r.PostFormValue("email"))
 
 	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("User not found"))
 		return
 	}
 
 	if user.Password != Encrypt(r.PostFormValue("password")) {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Bad Password"))
 		return
 	}
 
@@ -186,20 +186,6 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad file consistent"))
-		return
-	}
-	defer r.Body.Close()
-
-	if len(body) > maxFileSize {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Huge file"))
-		return
-	}
-
 	err = r.ParseMultipartForm(int64(maxFileSize))
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -216,24 +202,34 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 
 	f, err := os.OpenFile("/tmp/"+handler.Filename, os.O_WRONLY|os.O_CREATE, 0666)
 	defer f.Close()
+
 	io.Copy(f, file)
+	fi, err := f.Stat()
+	if fi.Size() > int64(maxFileSize) {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Huge file"))
+		return
+	}
 
 	meta := map[string]string{
 		"filename": handler.Filename,
 		"user_id":  strconv.Itoa(session.Values["user"].(SessionUser).ID),
 		"course":   "golang", //	hardcoded
 		"name":     "hw9",    //	hardcoded
+		"bucket":   defaultBucketName,
 	}
+
 	if err := s.Uploader.saveUserTask(meta); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Internal server Error"))
+		return
 	}
-	t := template.Must(template.ParseFiles("../../web/templates/success.html"))
-	t.Execute(w, nil)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("File Uploaded"))
 }
 
 func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Server Receinve task ID:", mux.Vars(r)["id"])
+	fmt.Println("Server Receive Task")
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		log.Printf("Error reading body: %v", err)
@@ -242,11 +238,16 @@ func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	result := grader.Result{}
+	result := Result{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		http.Error(w, "Error in unmarshalling JSON", http.StatusInternalServerError)
 	}
 	log.Println("RESULT:", result)
+	if err := saveResulstDB(result, s.Uploader.DBCon); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Internal server Error while saving results"))
+		return
+	}
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }

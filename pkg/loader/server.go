@@ -23,6 +23,12 @@ type Server struct {
 	ss       *sessions.CookieStore
 }
 
+type Result struct {
+	ID     int    `json:"id"`
+	Solved bool   `json:"solved"`
+	Msg    string `json:"msg"`
+}
+
 func NewServer() *Server {
 	uploader, err := NewFileLoader()
 	if err != nil {
@@ -53,9 +59,10 @@ func (s *Server) initRoutes() {
 	s.Router.HandleFunc("/signup_account", s.signupAccount).Methods("POST")
 	s.Router.HandleFunc("/upload", s.upload)
 	s.Router.HandleFunc("/stat", s.stat)
-	s.Router.HandleFunc("/results/{id:[0-9]+}", s.receiverResult).Methods("POST")
+	s.Router.HandleFunc("/results", s.receiverResult).Methods("POST")
 }
 
+// return User or error if user is not exist's in DB
 func UserByEmail(DBCon *sql.DB, email string) (*User, error) {
 	row := DBCon.QueryRow("SELECT * FROM users WHERE email = ?", email)
 	user := &User{}
@@ -107,6 +114,22 @@ func GetTask(DBCon *sql.DB, userID int) []Task {
 	}
 	rows.Close()
 	return tasks
+}
+
+func saveResulstDB(res Result, DBCon *sql.DB) error {
+	var status byte
+	if res.Solved {
+		status = 2
+	} else {
+		status = 1
+	}
+
+	_, err := DBCon.Exec("UPDATE tasks SET status=?  WHERE id=?", status, res.ID)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	return nil
 }
 
 func Encrypt(passwd string) string {

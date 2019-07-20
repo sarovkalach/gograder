@@ -2,7 +2,6 @@ package queuer
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -33,6 +32,16 @@ type Queuer struct {
 	messageCh chan amqp.Delivery
 	stopCh    chan bool
 	// tasks chan amqp.
+}
+
+type Task struct {
+	ID           int    `json:"id"`
+	Status       int    `json:"status"`
+	Course       string `json:"course"`
+	Name         string `json:"name"`
+	Filename     string `json:"filename"`
+	S3BucketName string `json:"bucket"`
+	UserID       int    `json:"user_id"`
 }
 
 type GraderTask struct {
@@ -102,8 +111,8 @@ func (q *Queuer) Run() error {
 	go func() {
 		for d := range msgs {
 			log.Printf("Received a message: %s", d.Body)
-			q.messageCh <- d
-			q.SendTask(string(d.Body))
+			// q.messageCh <- d
+			q.SendTask(d.Body)
 		}
 	}()
 
@@ -116,17 +125,11 @@ func (q *Queuer) Stop() {
 	q.stopCh <- true
 }
 
-func (q *Queuer) SendTask(task string) {
+func (q *Queuer) SendTask(data []byte) {
 
 	fmt.Println("URL:>", graderURL)
 
-	jsonTask, err := json.Marshal(GraderTask{Name: task, Timeout: defaultTimeout})
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	// var jsonStr = []byte(`{"name":"Test message", "timeout":3}`)
-	req, err := http.NewRequest("POST", graderURL, bytes.NewBuffer(jsonTask))
+	req, err := http.NewRequest("POST", graderURL, bytes.NewBuffer(data))
 	if err != nil {
 		log.Println("NewRequest ERR:", err)
 	}
@@ -140,8 +143,8 @@ func (q *Queuer) SendTask(task string) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("response Status:", resp.Status)
-	fmt.Println("response Headers:", resp.Header)
+	// fmt.Println("response Status:", resp.Status)
+	// fmt.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
 	fmt.Println("response Body:", string(body))
 }

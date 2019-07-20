@@ -2,12 +2,12 @@ package loader
 
 import (
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log"
 	"os"
 	"strconv"
-	"sync"
 
 	_ "github.com/go-sql-driver/mysql"
 
@@ -29,10 +29,11 @@ var (
 )
 
 var (
-	mysqlDSN     = "kalach:1234@/grader?charset=utf8"
-	amqpDSN      = "amqp://guest:guest@localhost:5672/"
-	s3URL        = "127.0.0.1:9000"
-	defaultQueue = "grader"
+	mysqlDSN          = "kalach:1234@/grader?charset=utf8"
+	amqpDSN           = "amqp://guest:guest@localhost:5672/"
+	s3URL             = "127.0.0.1:9000"
+	defaultQueue      = "grader"
+	defaultBucketName = "grader"
 )
 
 type FileLoader struct {
@@ -148,21 +149,11 @@ func (f *FileLoader) saveUserTask(meta map[string]string) error {
 		S3BucketName: meta["bucket"],
 		UserID:       id,
 	}
-	wg := &sync.WaitGroup{}
-	wg.Add(3)
-	go func() {
-		addDBTask(f.DBCon, task)
-		wg.Done()
-	}()
-	go func() {
-		addAmqpTask(f.amqpCon, f.queue, task)
-		wg.Done()
-	}()
-	go func() {
-		uploadS3(f.s3Client, task)
-		wg.Done()
-	}()
-	wg.Wait()
+
+	uploadS3(f.s3Client, task)
+	addDBTask(f.DBCon, task)
+	addAmqpTask(f.amqpCon, f.queue, task)
+
 	return nil
 }
 
@@ -199,6 +190,7 @@ func addDBTask(db *sql.DB, task *Task) {
 	if err != nil {
 		log.Println("Error reading Last ID", err)
 	}
+	task.ID = int(lastID)
 	log.Printf("Successfully saved task to DB %s. ID = %d\n", task.Filename, lastID)
 }
 
@@ -209,6 +201,7 @@ func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) {
 	}
 	defer ch.Close()
 
+	jsonTask, _ := json.Marshal(task)
 	err = ch.Publish(
 		"",         // exchange
 		queue.Name, // routing key
@@ -218,7 +211,7 @@ func addAmqpTask(amqpCon *amqp.Connection, queue amqp.Queue, task *Task) {
 			ContentType: "text/plain",
 			// UserId:      task.User,
 			// Type:        task.Course,
-			Body: []byte(task.S3BucketName + "/" + task.Name),
+			Body: jsonTask,
 		})
 
 	if err != nil {

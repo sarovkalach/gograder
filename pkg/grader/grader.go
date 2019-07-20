@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	callBackURL = "http://127.0.0.1:8080/results/1"
+	callBackURL = "http://127.0.0.1:8080/results"
 )
 
 var (
@@ -34,12 +34,17 @@ type Grader struct {
 }
 
 type Task struct {
-	Name    string `json:"name"`
-	User    string `json:"user,omitempty"`
-	Timeout int    `json:"timeout"`
+	ID           int    `json:"id"`
+	Status       int    `json:"status"`
+	Course       string `json:"course"`
+	Name         string `json:"name"`
+	Filename     string `json:"filename"`
+	S3BucketName string `json:"bucket"`
+	UserID       int    `json:"user_id"`
 }
 
 type Result struct {
+	ID     int    `json:"id"`
 	Solved bool   `json:"solved"`
 	Msg    string `json:"msg"`
 }
@@ -74,13 +79,13 @@ func (g *Grader) initS3() error {
 }
 
 func runTask(t *Task) {
-	cmd := exec.Command("touch", "/home/kalach/Grader_Command.txt")
+	cmd := exec.Command("sleep", "10")
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
 		sendResult(res)
 		fmt.Println("SEND Error TO URL:>", callBackURL)
 	}
-	sendResult(&Result{Solved: false, Msg: "Task solved"})
+	sendResult(&Result{Solved: true, Msg: "Task solved", ID: t.ID})
 }
 
 func sendResult(res *Result) {
@@ -104,27 +109,3 @@ func sendResult(res *Result) {
 	body, _ := ioutil.ReadAll(resp.Body)
 	fmt.Println("response Body from Server:", string(body))
 }
-
-// func (q *Queuer) SendTask() {
-
-// 	fmt.Println("URL:>", graderURL)
-// 	var jsonStr = []byte(`{"name":"Test message", "timeout":3}`)
-// 	req, err := http.NewRequest("POST", graderURL, bytes.NewBuffer(jsonStr))
-// 	if err != nil {
-// 		log.Println("NewRequest ERR:", err)
-// 	}
-// 	req.Header.Set("X-Custom-Header", "myvalue")
-// 	req.Header.Set("Content-Type", "application/json")
-
-// 	client := &http.Client{Timeout: 5 * time.Second}
-// 	resp, err := client.Do(req)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	fmt.Println("response Status:", resp.Status)
-// 	fmt.Println("response Headers:", resp.Header)
-// 	body, _ := ioutil.ReadAll(resp.Body)
-// 	fmt.Println("response Body:", string(body))
-// }
