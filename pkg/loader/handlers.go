@@ -79,7 +79,6 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	session.Values["user"] = SessionUser{ID: user.ID, Authenticated: true}
-	session.Values["test"] = "Test"
 
 	if err := saveSessionErr(session, r, w); err != nil {
 		return

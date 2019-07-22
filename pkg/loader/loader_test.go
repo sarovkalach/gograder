@@ -95,7 +95,7 @@ func TestDBSelectUsers(t *testing.T) {
 	}
 	for rows.Next() {
 		user := &User{}
-		err = rows.Scan(&user.ID, &user.Email, &user.Password)
+		err = rows.Scan(&user.ID, &user.Email, &user.Password, &user.RefreshToken)
 		if err != nil {
 			t.Error(err)
 		}

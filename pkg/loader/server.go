@@ -66,7 +66,7 @@ func (s *Server) initRoutes() {
 func UserByEmail(DBCon *sql.DB, email string) (*User, error) {
 	row := DBCon.QueryRow("SELECT * FROM users WHERE email = ?", email)
 	user := &User{}
-	err := row.Scan(&user.ID, &user.Email, &user.Password)
+	err := row.Scan(&user.ID, &user.Email, &user.Password, &user.RefreshToken)
 	if err != nil {
 		//check User exists
 		return nil, err

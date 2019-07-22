@@ -2,6 +2,7 @@ package grader
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,17 +10,21 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v6"
 )
 
 var (
 	callBackURL = "http://127.0.0.1:8080/results"
+	mysqlDSN    = "kalach:1234@/grader?charset=utf8"
 )
 
 var (
 	errS3connetction = errors.New("Can not connect to S3")
+	errDBconnection  = errors.New("Can not connect to DataBase")
 )
 
 var (
@@ -28,8 +33,14 @@ var (
 	defaultQueue = "grader"
 )
 
+var (
+	emailReg    = regexp.MustCompile(`\w[-._\w]*\w@\w[-._\w]*\w\.\w{2,3}`)
+	passwordReg = regexp.MustCompile(`[/\w|\W+/g]{8,}`)
+)
+
 type Grader struct {
 	s3Client *minio.Client
+	Router   *mux.Router
 }
 
 type Task struct {
@@ -50,16 +61,30 @@ type Result struct {
 
 func NewGrader() *Grader {
 	g := &Grader{}
-	err := g.initS3()
-	if err != nil {
+	if err := g.initS3(); err != nil {
 		panic(err)
 	}
-	return &Grader{}
+	return g
+}
+
+func (g *Grader) initRoutes() {
+	db, err := sql.Open("mysql", mysqlDSN)
+	uh := UserHandler{
+		DBCon: db,
+		tm:    newTokenManager(signKey),
+	}
+	err = db.Ping() // вот тут будет первое подключение к базе
+	if err != nil {
+		fmt.Println(err)
+		panic(errDBconnection)
+	}
+	refreshTokenStr := fmt.Sprintf("/get_token/{email:%s}&{password:%s}", emailReg, passwordReg)
+	g.Router.HandleFunc("/", uh.receiveTask)
+	g.Router.HandleFunc(refreshTokenStr, uh.getRefreshToken).Methods("GET")
 }
 
 func (g *Grader) Run() {
 	log.Println("Grader Start")
-	http.HandleFunc("/", g.ReceiveTask)
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
 
@@ -77,22 +102,24 @@ func (g *Grader) initS3() error {
 	return nil
 }
 
-func runTask(t *Task) {
+func runTask(DBCon *sql.DB, t *Task) {
+	user := getUserByID(DBCon, t.ID)
 	cmd := exec.Command("sleep", "10")
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
-		sendResult(res)
+		sendResult(*user, res)
 		fmt.Println("SEND Error TO URL:>", callBackURL)
 	}
-	sendResult(&Result{Solved: true, Msg: "Task solved", ID: t.ID})
+	sendResult(*user, &Result{Solved: true, Msg: "Task solved", ID: t.ID})
 }
 
-func sendResult(res *Result) {
+func sendResult(user User, res *Result) {
 	result, err := json.Marshal(*res)
 	if err != nil {
 		log.Println("error in Marshall")
 	}
 	req, err := http.NewRequest("POST", callBackURL, bytes.NewBuffer(result))
+	// req.Header.Set("Authorization", user.)
 	if err != nil {
 		log.Println("NewRequest ERR:", err)
 	}
