@@ -23,7 +23,6 @@ var (
 )
 
 var (
-	mysqlDSN     = "kalach:1234@/grader?charset=utf8"
 	amqpDSN      = "amqp://guest:guest@localhost:5672/"
 	s3URL        = "127.0.0.1:9000"
 	defaultQueue = "grader"

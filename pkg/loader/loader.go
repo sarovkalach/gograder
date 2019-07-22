@@ -125,7 +125,7 @@ func (f *FileLoader) initAMQPCon() error {
 
 	q, err := ch.QueueDeclare(
 		defaultQueue, // name
-		false,        // durable
+		true,         // durable
 		false,        // delete when unused
 		false,        // exclusive
 		false,        // no-wait
@@ -134,6 +134,12 @@ func (f *FileLoader) initAMQPCon() error {
 	if err != nil {
 		return errAMQPDeclare
 	}
+
+	err = ch.Qos(
+		1,     // prefetch count
+		0,     // prefetch size
+		false, // global
+	)
 	f.queue = q
 	return nil
 	// Don't forget
@@ -153,7 +159,6 @@ func (f *FileLoader) saveUserTask(meta map[string]string) error {
 	uploadS3(f.s3Client, task)
 	addDBTask(f.DBCon, task)
 	addAmqpTask(f.amqpCon, f.queue, task)
-
 	return nil
 }
 

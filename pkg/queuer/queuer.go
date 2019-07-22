@@ -98,7 +98,7 @@ func (q *Queuer) Run() error {
 	msgs, err := ch.Consume(
 		defaultQueue, // queue
 		"",           // consumer
-		true,         // auto-ack
+		false,        // auto-ack
 		false,        // exclusive
 		false,        // no-local
 		false,        // no-wait
@@ -113,6 +113,7 @@ func (q *Queuer) Run() error {
 			log.Printf("Received a message: %s", d.Body)
 			// q.messageCh <- d
 			q.SendTask(d.Body)
+			d.Ack(false)
 		}
 	}()
 
