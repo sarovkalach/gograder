@@ -3,6 +3,7 @@ package grader
 import (
 	"crypto/sha256"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 )
@@ -15,6 +16,10 @@ type User struct {
 	// LastName  string
 	// CreatedAt time.Time
 }
+
+var (
+	errTokenNotValid = errors.New("Token not valid")
+)
 
 type UserHandler struct {
 	DBCon *sql.DB
@@ -29,6 +34,16 @@ func (u *User) UpdateToken(DBCon *sql.DB) error {
 	}
 	return nil
 
+}
+func (u *User) CheckToken(DBCon *sql.DB, token string) error {
+	row := DBCon.QueryRow("SELECT refreshtoken FROM users WHERE refreshtoken = ?", token)
+	var refreshToken string
+	err := row.Scan(&refreshToken)
+	if err != nil {
+		//check User exists
+		return errTokenNotValid
+	}
+	return nil
 }
 
 func getUserByID(DBCon *sql.DB, id int) *User {
