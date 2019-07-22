@@ -153,7 +153,7 @@ func (f *FileLoader) saveUserTask(meta map[string]string) error {
 		Name:         meta["name"],
 		Filename:     meta["filename"],
 		S3BucketName: meta["bucket"],
-		UserID:       id,
+		UserID:       id, //stub must be access token with email or id
 	}
 
 	uploadS3(f.s3Client, task)

@@ -242,6 +242,7 @@ func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Error in unmarshalling JSON", http.StatusInternalServerError)
 	}
 	log.Println("RESULT:", result)
+	log.Println("HEADDDERRRS!!!", r.Header)
 	if err := saveResulstDB(result, s.Uploader.DBCon); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Internal server Error while saving results"))

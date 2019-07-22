@@ -42,15 +42,26 @@ func getUserByID(DBCon *sql.DB, id int) *User {
 	return user
 }
 
-func getUserByRefreshToken(DBCon *sql.DB, refreshtoken int) *User {
+func getUserByEmail(DBCon *sql.DB, email string) (*User, error) {
+	row := DBCon.QueryRow("SELECT * FROM users WHERE refreshtoken = ?", email)
+	user := &User{}
+	err := row.Scan(&user.ID, &user.Email, &user.Password, &user.RefreshToken)
+	if err != nil {
+		//check User exists
+		return nil, err
+	}
+	return user, nil
+}
+
+func getUserByRefreshToken(DBCon *sql.DB, refreshtoken string) (*User, error) {
 	row := DBCon.QueryRow("SELECT * FROM users WHERE refreshtoken = ?", refreshtoken)
 	user := &User{}
 	err := row.Scan(&user.ID, &user.Email, &user.Password, &user.RefreshToken)
 	if err != nil {
 		//check User exists
-		return nil
+		return nil, err
 	}
-	return user
+	return user, nil
 }
 
 func getUser(DBCon *sql.DB, email string, passwd string) (*User, error) {

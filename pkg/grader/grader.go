@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"time"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v6"
 )
@@ -60,27 +61,35 @@ type Result struct {
 }
 
 func NewGrader() *Grader {
-	g := &Grader{}
+	g := &Grader{Router: mux.NewRouter()}
+	if err := g.initRoutes(); err != nil {
+		panic(err)
+	}
 	if err := g.initS3(); err != nil {
 		panic(err)
 	}
 	return g
 }
 
-func (g *Grader) initRoutes() {
+func (g *Grader) initRoutes() error {
 	db, err := sql.Open("mysql", mysqlDSN)
-	uh := UserHandler{
+	if err != nil {
+		return err
+	}
+	uh := &UserHandler{
 		DBCon: db,
 		tm:    newTokenManager(signKey),
 	}
+
 	err = db.Ping() // вот тут будет первое подключение к базе
 	if err != nil {
 		fmt.Println(err)
-		panic(errDBconnection)
+		return errDBconnection
 	}
 	refreshTokenStr := fmt.Sprintf("/get_token/{email:%s}&{password:%s}", emailReg, passwordReg)
-	g.Router.HandleFunc("/", uh.receiveTask)
-	g.Router.HandleFunc(refreshTokenStr, uh.getRefreshToken).Methods("GET")
+	http.HandleFunc("/", uh.ReceiveTask)
+	g.Router.HandleFunc(refreshTokenStr, uh.GetRefreshToken).Methods("GET")
+	return nil
 }
 
 func (g *Grader) Run() {
@@ -102,24 +111,26 @@ func (g *Grader) initS3() error {
 	return nil
 }
 
-func runTask(DBCon *sql.DB, t *Task) {
-	user := getUserByID(DBCon, t.ID)
+func runTask(DBCon *sql.DB, tm *TokenManager, t *Task) {
+	user := getUserByID(DBCon, t.ID) // It's Stub must be getUserByEmail, where email was gotten from task->accessToken
+	accessToken, _ := tm.accessToken(DBCon, user.RefreshToken)
 	cmd := exec.Command("sleep", "10")
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
-		sendResult(*user, res)
+		sendResult(user.RefreshToken, tm, res)
 		fmt.Println("SEND Error TO URL:>", callBackURL)
 	}
-	sendResult(*user, &Result{Solved: true, Msg: "Task solved", ID: t.ID})
+	sendResult(accessToken, tm, &Result{Solved: true, Msg: "Task solved", ID: t.ID})
 }
 
-func sendResult(user User, res *Result) {
+func sendResult(accessToken string, tm *TokenManager, res *Result) {
+	// accessToken := tm.accessToken(refreshToken)
 	result, err := json.Marshal(*res)
 	if err != nil {
 		log.Println("error in Marshall")
 	}
 	req, err := http.NewRequest("POST", callBackURL, bytes.NewBuffer(result))
-	// req.Header.Set("Authorization", user.)
+	req.Header.Set("Authorization", accessToken)
 	if err != nil {
 		log.Println("NewRequest ERR:", err)
 	}

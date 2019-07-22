@@ -16,12 +16,13 @@ var (
 	errDBiternal = errors.New("Internal DB error")
 )
 
-func (uh *UserHandler) receiveTask(w http.ResponseWriter, r *http.Request) {
+func (uh *UserHandler) ReceiveTask(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		w.Write([]byte("Only Post Method"))
 		return
 	}
+
 	log.Println("Income message")
 
 	body, err := ioutil.ReadAll(r.Body)
@@ -36,13 +37,14 @@ func (uh *UserHandler) receiveTask(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Println("Task Unmarshalled: ", task)
 	go func() {
-		runTask(uh.DBCon, task)
+		runTask(uh.DBCon, uh.tm, task)
 	}()
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }
 
-func (uh *UserHandler) getRefreshToken(w http.ResponseWriter, r *http.Request) {
+// Get refreshToken and save it in DB
+func (uh *UserHandler) GetRefreshToken(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	email := vars["email"]
 	password := vars["password"]
@@ -54,7 +56,7 @@ func (uh *UserHandler) getRefreshToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	accesToken := uh.tm.refreshToken(user)
+	accesToken := uh.tm.createToken("refreshToken", user)
 	if err := user.UpdateToken(uh.DBCon); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(errDBiternal.Error()))

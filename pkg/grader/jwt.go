@@ -1,6 +1,9 @@
 package grader
 
 import (
+	"database/sql"
+	"errors"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -10,6 +13,9 @@ import (
 // type JwtToken struct {
 // 	Secret []byte
 // }
+var (
+	errBadToken = errors.New("Bad Token")
+)
 
 type TokenManager struct {
 	Secret []byte
@@ -25,20 +31,21 @@ func newTokenManager(secret string) *TokenManager {
 	return &TokenManager{Secret: []byte(secret)}
 }
 
-func (j *TokenManager) refreshToken(u *User) string {
+func (j *TokenManager) createToken(tokenType string, u *User) string {
 	var timeLive int64
-	// if tokenType == "refreshToken" {
-	// 	timeLive = time.Now().Add(refreshTokenValidTime).Unix()
-	// } else {
-	// 	timeLive = time.Now().Add(acessTokenValidTime).Unix()
-	// }
+	if tokenType == "refreshToken" {
+		timeLive = time.Now().Add(refreshTokenValidTime).Unix()
+	} else {
+		timeLive = time.Now().Add(acessTokenValidTime).Unix()
+	}
 
 	timestamp := strconv.FormatInt(timeLive, 10)
 	// Set fields of jwt
 	claims := make(jwt.MapClaims)
 	claims["iss"] = "http://127.0.0.1"
-	claims["type"] = "refreshToken"
-	claims["type"] = "access"
+	// claims["type"] = "refreshToken"
+	claims["type"] = tokenType
+	// claims["type"] = "access"
 	// claims["admin"] = u.Admin
 	claims["sub"] = u.Email
 	claims["exp"] = timestamp
@@ -49,6 +56,11 @@ func (j *TokenManager) refreshToken(u *User) string {
 	return tokenString
 }
 
-func (j *TokenManager) accessToken(refreshToken string) {
-	// user := getUserByRefreshToken(refreshToken)
+func (j *TokenManager) accessToken(DBCon *sql.DB, refreshToken string) (string, error) {
+	user, err := getUserByRefreshToken(DBCon, refreshToken)
+	if err != nil {
+		return "", errBadToken
+	}
+	fmt.Println(user)
+	return "", nil
 }
