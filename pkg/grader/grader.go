@@ -78,7 +78,7 @@ func (g *Grader) initRoutes() error {
 	}
 	uh := &UserHandler{
 		DBCon: db,
-		tm:    newTokenManager(signKey),
+		tm:    newJwtToken(signKey),
 	}
 
 	err = db.Ping() // вот тут будет первое подключение к базе
