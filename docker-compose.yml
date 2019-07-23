@@ -2,18 +2,21 @@ version: '3.1'
 
 services:
   # App Service
-  # app:
-  #   # Configuration for building the docker image for the service
-  #   build:
-  #     context: . # Use an image built from the specified dockerfile in the current directory.
-  #     dockerfile: Dockerfile
-  #   ports:
-  #     - "8080:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
-  #   restart: unless-stopped
-  #   depends_on: 
-  #     - redis # This service depends on redis. Start that first.
-  #   environment: # Pass environment variables to the service
-  #     REDIS_URL: redis:6379    
+  app:
+    # Configuration for building the docker image for the service
+    build:
+      context: . # Use an image built from the specified dockerfile in the current directory.
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
+    restart: unless-stopped
+    depends_on: 
+      - redis # This service depends on redis. Start that first.
+      - mysql
+      - rabbitmq
+      - minio
+    environment: # Pass environment variables to the service
+      REDIS_URL: redis:6379    
   #   networks: # Networks to join (Services on the same network can communicate with each other using their name)
   #     - backend
   mysql:
