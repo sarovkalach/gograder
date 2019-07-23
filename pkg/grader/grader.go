@@ -16,6 +16,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 	"github.com/minio/minio-go/v6"
+	"github.com/sarovkalach/gograder/pkg/jwt"
 )
 
 var (
@@ -78,7 +79,7 @@ func (g *Grader) initRoutes() error {
 	}
 	uh := &UserHandler{
 		DBCon: db,
-		tm:    newJwtToken(signKey),
+		token: jwt.NewJwtToken(jwt.SignKey),
 	}
 
 	err = db.Ping() // вот тут будет первое подключение к базе
@@ -86,9 +87,9 @@ func (g *Grader) initRoutes() error {
 		fmt.Println(err)
 		return errDBconnection
 	}
-	refreshTokenStr := fmt.Sprintf("/get_token/{email:%s}&{password:%s}", emailReg, passwordReg)
+	// refreshTokenStr := fmt.Sprintf("/get_token/{email:%s}&{password:%s}", emailReg, passwordReg)
 	http.HandleFunc("/", uh.ReceiveTask)
-	g.Router.HandleFunc(refreshTokenStr, uh.GetRefreshToken).Methods("GET")
+	// g.Router.HandleFunc(refreshTokenStr, uh.GetRefreshToken).Methods("GET")
 	return nil
 }
 
@@ -111,26 +112,25 @@ func (g *Grader) initS3() error {
 	return nil
 }
 
-func runTask(DBCon *sql.DB, tm *TokenManager, t *Task) {
-	user := getUserByID(DBCon, t.ID) // It's Stub must be getUserByEmail, where email was gotten from task->accessToken
-	accessToken, _ := tm.accessToken(DBCon, user.RefreshToken)
+// func runTask(DBCon *sql.DB, tm *JwtToken, t *Task) {
+func runTask(DBCon *sql.DB, t *Task, token string) {
+	// user := getUserByID(DBCon, t.ID) // It's Stub must be getUserByEmail, where email was gotten from task->accessToken
 	cmd := exec.Command("sleep", "10")
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
-		sendResult(user.RefreshToken, tm, res)
+		sendResult(res, token)
 		fmt.Println("SEND Error TO URL:>", callBackURL)
 	}
-	sendResult(accessToken, tm, &Result{Solved: true, Msg: "Task solved", ID: t.ID})
+	sendResult(&Result{Solved: true, Msg: "Task solved", ID: t.ID}, token)
 }
 
-func sendResult(accessToken string, tm *TokenManager, res *Result) {
-	// accessToken := tm.accessToken(refreshToken)
+func sendResult(res *Result, token string) {
 	result, err := json.Marshal(*res)
 	if err != nil {
 		log.Println("error in Marshall")
 	}
 	req, err := http.NewRequest("POST", callBackURL, bytes.NewBuffer(result))
-	req.Header.Set("Authorization", accessToken)
+	req.Header.Set("Authorization", token)
 	if err != nil {
 		log.Println("NewRequest ERR:", err)
 	}

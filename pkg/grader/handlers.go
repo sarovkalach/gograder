@@ -6,8 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 var (
@@ -31,39 +29,46 @@ func (uh *UserHandler) ReceiveTask(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "can't read body", http.StatusBadRequest)
 		return
 	}
+	defer r.Body.Close()
+
 	task := &Task{}
+	log.Println("BoDY: ", string(body))
 	if err := json.Unmarshal(body, task); err != nil {
 		http.Error(w, "Error in unmarshalling JSON", http.StatusInternalServerError)
 	}
 	log.Println("Task Unmarshalled: ", task)
+	// uh.token.Check(task.UserID, inputToken)
+
+	token := uh.token.Create(task.UserID, "accessToken")
 	go func() {
-		runTask(uh.DBCon, uh.tm, task)
+		// runTask(uh.DBCon, uh.tm, task)
+		runTask(uh.DBCon, task, token)
 	}()
 	w.WriteHeader(http.StatusOK)
 	w.Write(body)
 }
 
 // Get refreshToken and save it in DB
-func (uh *UserHandler) GetRefreshToken(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	email := vars["email"]
-	password := vars["password"]
+// func (uh *UserHandler) GetRefreshToken(w http.ResponseWriter, r *http.Request) {
+// 	vars := mux.Vars(r)
+// 	email := vars["email"]
+// 	password := vars["password"]
 
-	user, err := getUser(uh.DBCon, email, password)
-	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
-		return
-	}
+// 	user, err := getUser(uh.DBCon, email, password)
+// 	if err != nil {
+// 		w.WriteHeader(http.StatusNotFound)
+// 		w.Write([]byte(err.Error()))
+// 		return
+// 	}
 
-	accesToken := uh.tm.createToken("refreshToken", user)
-	if err := user.UpdateToken(uh.DBCon); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(errDBiternal.Error()))
-	}
-	// tokens := map[string]map[string]string{"access_token": accessToken}
-	RespondWithJSON(w, http.StatusOK, accesToken)
-}
+// 	accesToken := uh.tm.createToken("refreshToken", user)
+// 	if err := user.UpdateToken(uh.DBCon); err != nil {
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		w.Write([]byte(errDBiternal.Error()))
+// 	}
+// 	// tokens := map[string]map[string]string{"access_token": accessToken}
+// 	RespondWithJSON(w, http.StatusOK, accesToken)
+// }
 
 func RespondWithError(w http.ResponseWriter, code int, message string) {
 	RespondWithJSON(w, code, map[string]string{"error": message})

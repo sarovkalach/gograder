@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+
+	"github.com/sarovkalach/gograder/pkg/jwt"
 )
 
 type User struct {
@@ -23,7 +25,7 @@ var (
 
 type UserHandler struct {
 	DBCon *sql.DB
-	tm    *TokenManager
+	token *jwt.JwtToken
 }
 
 func (u *User) UpdateToken(DBCon *sql.DB) error {

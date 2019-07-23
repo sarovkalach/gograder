@@ -11,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
+	"github.com/sarovkalach/gograder/pkg/jwt"
 )
 
 var (
@@ -21,6 +22,7 @@ type Server struct {
 	Router   *mux.Router
 	Uploader *FileLoader
 	ss       *sessions.CookieStore
+	token    *jwt.JwtToken
 }
 
 type Result struct {
@@ -38,7 +40,8 @@ func NewServer() *Server {
 		Router:   mux.NewRouter(),
 		Uploader: uploader,
 		// it must no be saved in code or smth else. Only by os.Getenv. Hardcoded
-		ss: sessions.NewCookieStore([]byte("PRI")),
+		ss:    sessions.NewCookieStore([]byte("PRI")),
+		token: jwt.NewJwtToken(jwt.SignKey),
 	}
 	s.initRoutes()
 	gob.Register(SessionUser{})

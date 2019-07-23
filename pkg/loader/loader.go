@@ -45,13 +45,13 @@ type FileLoader struct {
 }
 
 type Task struct {
-	ID           int
-	Status       int
-	Course       string
-	Name         string
-	Filename     string
-	S3BucketName string
-	UserID       int
+	ID           int    `json:"id"`
+	Status       int    `json:"status"`
+	Course       string `json:"course"`
+	Name         string `json:"name"`
+	Filename     string `json:"filename"`
+	S3BucketName string `json:"bucket"`
+	UserID       int    `json:"user_id"`
 }
 
 func showDBTasks(db *sql.DB) {

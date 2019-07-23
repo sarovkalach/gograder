@@ -21,6 +21,8 @@ var (
 	errCannotParseForm     = errors.New("Cannot parse form")
 	errCannotCreateUser    = errors.New("Cannot create user")
 	errDBiternal           = errors.New("Internal DB error")
+	errNoToken             = errors.New("No token")
+	errBadToken            = errors.New("Bad Token")
 )
 
 var (
@@ -228,10 +230,23 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Server Receive Task")
+	token := r.Header.Get("Authorization")
+	if token == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(errNoToken.Error()))
+		return
+	}
+
+	//hardcoded "1"
+	res, err := s.token.Check("1", token)
+	if !res || err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(errBadToken.Error()))
+		return
+	}
+
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("Error reading body: %v", err)
 		http.Error(w, "can't read body", http.StatusBadRequest)
 		return
 	}
@@ -240,9 +255,10 @@ func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
 	result := Result{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		http.Error(w, "Error in unmarshalling JSON", http.StatusInternalServerError)
+		return
 	}
+
 	log.Println("RESULT:", result)
-	log.Println("HEADDDERRRS!!!", r.Header)
 	if err := saveResulstDB(result, s.Uploader.DBCon); err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Internal server Error while saving results"))

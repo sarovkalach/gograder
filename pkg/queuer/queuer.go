@@ -128,7 +128,7 @@ func (q *Queuer) Stop() {
 
 func (q *Queuer) SendTask(data []byte) {
 
-	fmt.Println("URL:>", graderURL)
+	fmt.Println("GRADER URL:>", graderURL)
 
 	req, err := http.NewRequest("POST", graderURL, bytes.NewBuffer(data))
 	if err != nil {
