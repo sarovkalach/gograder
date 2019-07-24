@@ -29,8 +29,10 @@ var (
 )
 
 var (
-	mysqlDSN          = "kalach:1234@/grader?charset=utf8"
-	amqpDSN           = "amqp://guest:guest@localhost:5672/"
+	// mysqlDSN          = "kalach:1234@/grader?charset=utf8"
+	mysqlDSN = "kalach:1234@tcp(mysql:3306)/grader"
+	// amqpDSN           = "amqp://guest:guest@localhost:5672/"
+	amqpDSN           = "amqp://guest:guest@rabbitmq:5672/"
 	s3URL             = "127.0.0.1:9000"
 	defaultQueue      = "grader"
 	defaultBucketName = "grader"
@@ -72,10 +74,10 @@ func showDBTasks(db *sql.DB) {
 
 func NewFileLoader() (*FileLoader, error) {
 	f := &FileLoader{}
-	if err := f.initS3(); err != nil {
+	if err := f.initDBCon(); err != nil {
 		return nil, err
 	}
-	if err := f.initDBCon(); err != nil {
+	if err := f.initS3(); err != nil {
 		return nil, err
 	}
 	if err := f.initAMQPCon(); err != nil {
@@ -113,6 +115,7 @@ func (f *FileLoader) initDBCon() error {
 func (f *FileLoader) initAMQPCon() error {
 	conn, err := amqp.Dial(amqpDSN)
 	if err != nil {
+		// return err
 		return errAMQPconnetction
 	}
 	f.amqpCon = conn

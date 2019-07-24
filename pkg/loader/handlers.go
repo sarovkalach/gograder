@@ -51,7 +51,7 @@ func (s *Server) stat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !session.IsNew {
-		t := template.Must(template.ParseFiles("../../web/templates/stat.html"))
+		t := template.Must(template.ParseFiles("web/templates/stat.html"))
 		tasks := GetTask(s.Uploader.DBCon, session.Values["user"].(SessionUser).ID)
 		t.Execute(w, tasks)
 	} else {
@@ -92,13 +92,13 @@ func (s *Server) authenticate(w http.ResponseWriter, r *http.Request) {
 
 //main page
 func (s *Server) index(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.ParseFiles("../../web/templates/index.html"))
+	t := template.Must(template.ParseFiles("web/templates/index.html"))
 	t.Execute(w, nil)
 }
 
 // registration form
 func (s *Server) signup(w http.ResponseWriter, r *http.Request) {
-	t := template.Must(template.ParseFiles("../../web/templates/signup.html"))
+	t := template.Must(template.ParseFiles("web/templates/signup.html"))
 	t.Execute(w, nil)
 
 }
@@ -148,7 +148,7 @@ func (s *Server) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t := template.Must(template.ParseFiles("../../web/templates/login.html"))
+	t := template.Must(template.ParseFiles("web/templates/login.html"))
 	t.Execute(w, nil)
 }
 
@@ -172,7 +172,7 @@ func (s *Server) logout(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		t := template.Must(template.ParseFiles("../../web/templates/upload.html"))
+		t := template.Must(template.ParseFiles("web/templates/upload.html"))
 		t.Execute(w, nil)
 		return
 	}

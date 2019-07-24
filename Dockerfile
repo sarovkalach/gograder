@@ -23,10 +23,9 @@ RUN go install -v ./...
 # This container exposes port 8080 to the outside world
 EXPOSE 8080
 
-WORKDIR $GOPATH/src/github.com/sarovkalach/gograder/cmd/loader
 
-RUN go build -o loader
-ENTRYPOINT loader
+RUN go build -o cmd/loader/loader cmd/loader/main.go
+ENTRYPOINT ["./cmd/loader/loader"]
 # Run the executable
 # CMD ["go run main.go"]
 # ENTRYPOINT []

@@ -1,7 +1,7 @@
 version: '3.1'
 
 services:
-  # App Service
+  # Loader Service
   app:
     # Configuration for building the docker image for the service
     build:
@@ -11,14 +11,11 @@ services:
       - "8080:8080" # Forward the exposed port 8080 on the container to port 8080 on the host machine
     restart: unless-stopped
     depends_on: 
-      - redis # This service depends on redis. Start that first.
       - mysql
-      - rabbitmq
-      - minio
     environment: # Pass environment variables to the service
       REDIS_URL: redis:6379    
-  #   networks: # Networks to join (Services on the same network can communicate with each other using their name)
-  #     - backend
+
+
   mysql:
     image: mysql:8.0.3
     restart: always
@@ -34,17 +31,36 @@ services:
       - './db/users.sql:/docker-entrypoint-initdb.d/users.sql'
 
 
+  redis:
+    image: 'bitnami/redis:5.0'
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    ports:
+      - '6379:6379'
+    depends_on: 
+      - mysql
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+     
+      
   adminer:
     image: adminer
     restart: always
     ports:
       - 8090:8080
+    depends_on: 
+      - mysql
 
 
   rabbitmq:
     image: 'rabbitmq'
     ports:
       - '5672:5672'
+    depends_on: 
+      - mysql
+
 
   minio:
     image: minio/minio:latest
@@ -53,12 +69,15 @@ services:
       - ./minio-data:/export
     ports:
       - '9000:9000'
+    depends_on: 
+      - mysql
     environment:
       MINIO_ACCESS_KEY: 9013HBZHIRHONH8ZIWL6
       MINIO_SECRET_KEY: gKIVgZaWAiuXbugPv9+dT4MKWsKlqxCyXFI+9ys+
       # MINIO_DEFAULT_BUCKETS: grader,test
     command: server /export
-    
+  
+
   createbuckets:
     image: minio/mc
     depends_on:
@@ -70,17 +89,6 @@ services:
       /usr/bin/mc policy download myminio/grader;
       exit 0;
       "
-
-  redis:
-    image: 'bitnami/redis:5.0'
-    environment:
-      # ALLOW_EMPTY_PASSWORD is recommended only for development.
-      - ALLOW_EMPTY_PASSWORD=yes
-      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
-    ports:
-      - '6379:6379'
-    volumes:
-      - 'redis_data:/bitnami/redis/data'
 
 volumes:
   redis_data:
