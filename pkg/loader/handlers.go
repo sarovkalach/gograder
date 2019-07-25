@@ -216,7 +216,7 @@ func (s *Server) upload(w http.ResponseWriter, r *http.Request) {
 		"filename": handler.Filename,
 		"user_id":  strconv.Itoa(session.Values["user"].(SessionUser).ID),
 		"course":   "golang", //	hardcoded
-		"name":     "hw9",    //	hardcoded
+		"name":     "task1",  //	hardcoded
 		"bucket":   defaultBucketName,
 	}
 

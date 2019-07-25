@@ -114,11 +114,13 @@ func (g *Grader) initS3() error {
 
 // func runTask(DBCon *sql.DB, tm *JwtToken, t *Task) {
 func runTask(DBCon *sql.DB, t *Task, token string) {
-	cmd := exec.Command("sleep", "10")
+	// cmd := exec.Command("sleep", "10")
+	cmd := exec.Command("docker", "run", t.Name)
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
 		sendResult(res, token)
 		fmt.Println("SEND Error TO URL:>", callBackURL)
+		return
 	}
 	sendResult(&Result{Solved: true, Msg: "Task solved", ID: t.ID}, token)
 }
@@ -141,7 +143,7 @@ func sendResult(res *Result, token string) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Println("response Status from Server:", resp.Status)
+	fmt.Println("response Status from Loader:", resp.Status)
 	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println("response Body from Server:", string(body))
+	fmt.Println("response Body from Loader:", string(body))
 }
