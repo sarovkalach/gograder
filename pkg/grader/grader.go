@@ -114,7 +114,6 @@ func (g *Grader) initS3() error {
 
 // func runTask(DBCon *sql.DB, tm *JwtToken, t *Task) {
 func runTask(DBCon *sql.DB, t *Task, token string) {
-	// cmd := exec.Command("sleep", "10")
 	cmd := exec.Command("docker", "run", t.Name)
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
