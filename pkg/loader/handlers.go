@@ -238,7 +238,7 @@ func (s *Server) receiverResult(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//hardcoded "1"
-	res, err := s.token.Check("1", token)
+	res, err := s.token.Check(token)
 	if !res || err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte(errBadToken.Error()))

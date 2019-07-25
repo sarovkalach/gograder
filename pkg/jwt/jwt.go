@@ -43,7 +43,7 @@ func (j *JwtToken) parseSecretGetter(token *jwt.Token) (interface{}, error) {
 	return j.Secret, nil
 }
 
-func (j *JwtToken) Check(id string, inputToken string) (bool, error) {
+func (j *JwtToken) Check(inputToken string) (bool, error) {
 	payload := &Claims{}
 	_, err := jwt.ParseWithClaims(inputToken, payload, j.parseSecretGetter)
 	if err != nil {
@@ -52,8 +52,8 @@ func (j *JwtToken) Check(id string, inputToken string) (bool, error) {
 	if payload.Valid() != nil {
 		return false, fmt.Errorf("invalid jwt token: %v", err)
 	}
-	fmt.Println("ID: ", id, "Payload ID: ", payload.Id)
-	return payload.Id == id, nil
+	fmt.Println("Payload ID: ", payload.Id)
+	return true, nil
 }
 
 func (j *JwtToken) Create(userID int, tokenType string) string {

@@ -114,7 +114,6 @@ func (g *Grader) initS3() error {
 
 // func runTask(DBCon *sql.DB, tm *JwtToken, t *Task) {
 func runTask(DBCon *sql.DB, t *Task, token string) {
-	// user := getUserByID(DBCon, t.ID) // It's Stub must be getUserByEmail, where email was gotten from task->accessToken
 	cmd := exec.Command("sleep", "10")
 	if err := cmd.Run(); err != nil {
 		res := &Result{Solved: false, Msg: err.Error()}
